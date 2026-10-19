@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101a33">
+<title>CR Decks</title>
+<style>
+:root{
+  --bg:#0e1730;--bg2:#16223f;--panel:#1a2849;--panel2:#22335c;--ink:#f1f4ff;--muted:#9eabcf;--line:rgba(255,255,255,.1);
+  --gold:#f6c445;--gold-d:#b98a19;--elixir:#cf3fc6;--elixir-d:#851e80;--evo:#c04dff;--hero:#ffb21c;--champ:#36d1c1;
+  --win:#4fd683;--loss:#ff6f6f;--troop:#3d74d0;--building:#8a7a62;--spell:#8a4fd2;
+  --nav:64px;--safe-b:env(safe-area-inset-bottom,0px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:500 15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.top{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 8px;border-bottom:1px solid var(--line)}
+.trow{display:flex;align-items:center;gap:8px}
+h1{margin:0;font-size:1.25rem;font-weight:900;letter-spacing:.01em;color:var(--gold);flex:1}
+.count{color:var(--muted);font-size:.85rem;font-weight:700}
+.srow{display:flex;gap:8px;margin-top:8px}
+.search{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:16px}
+.ibtn{flex:none;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:0 12px;font-weight:800;font-size:.9rem;display:flex;align-items:center;gap:6px}
+.ibtn .badge{background:var(--gold);color:#352500;border-radius:999px;padding:0 6px;font-size:.75rem}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:8px -12px 0;padding:0 12px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--bg2);border-radius:999px;padding:6px 12px;font-weight:800;font-size:.82rem;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--gold);color:#352500;border-color:var(--gold)}
+main{padding:10px 10px calc(var(--nav) + var(--safe-b) + 20px)}
+.sec{margin:16px 4px 6px;font-weight:900;font-size:1.02rem;color:var(--gold)}
+.secn{margin:0 4px 8px;color:var(--muted);font-size:.8rem}
+.dk{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:10px;content-visibility:auto;contain-intrinsic-size:auto 330px}
+.dk.main{border-color:#e0245e}
+.dh{display:flex;align-items:flex-start;gap:8px}
+.dt{flex:1;min-width:0}
+.dt h3{margin:0;font-size:1rem;font-weight:900;line-height:1.2;overflow-wrap:anywhere}
+.dt .sub{color:var(--muted);font-size:.76rem;font-weight:700;margin-top:2px}
+.elx{flex:none;display:flex;align-items:center;gap:4px;background:var(--bg2);border-radius:8px;padding:3px 7px;font-weight:900;font-size:.82rem}
+.drop{width:9px;height:12px;background:var(--elixir);border-radius:50% 50% 50% 50%/60% 60% 40% 40%;display:inline-block}
+.fav{flex:none;background:var(--bg2);border:1px solid var(--line);border-radius:10px;width:36px;height:30px;font-size:1.05rem;line-height:1;color:var(--muted)}
+.fav[aria-pressed="true"]{color:#ff4d6d;border-color:#ff4d6d}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tag{font-size:.7rem;font-weight:900;padding:2px 7px;border-radius:6px;background:var(--bg2);border:1px solid var(--line)}
+.tag.main{background:#e0245e;border-color:#e0245e}
+.tag.mine{background:var(--gold);color:#352500;border-color:var(--gold)}
+.tag.slot{background:#2f6fde;border-color:#2f6fde}.tag.war{background:#1f9d57;border-color:#1f9d57}
+.tag.user{border-color:var(--champ);color:var(--champ)}
+.tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin:8px -10px 0;padding:0 10px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;max-width:220px;text-align:left;border:1px solid var(--line);background:transparent;border-radius:9px;padding:4px 8px;font-size:.72rem;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tab small{display:block;font-weight:700;opacity:.8}
+.tab[aria-selected="true"]{background:var(--bg2);color:var(--ink);border-color:var(--gold)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px}
+.cd{position:relative;aspect-ratio:5/6;border-radius:9px;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;text-align:center;font-weight:900;font-size:.66rem;line-height:1.1;padding:3px;color:#fff}
+.cd.troop{background:linear-gradient(160deg,#5b93ec,var(--troop))}
+.cd.building{background:linear-gradient(160deg,#a8987c,var(--building))}
+.cd.spell{background:linear-gradient(160deg,#a878ea,var(--spell))}
+.cd img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cd.pic .nm{display:none}
+.cd .nm{position:relative;text-shadow:0 1px 2px #000}
+.cd .cost{position:absolute;top:2px;left:2px;z-index:2;width:18px;height:21px;background:var(--elixir);border:1.5px solid var(--elixir-d);border-radius:50% 50% 50% 50%/60% 60% 40% 40%;display:grid;place-items:center;font-size:.68rem;font-weight:900}
+.cd .rl{position:absolute;top:2px;right:2px;z-index:2;font-size:.55rem;font-weight:900;padding:1px 4px;border-radius:4px;color:#1a1030}
+.cd.evo{box-shadow:inset 0 0 0 2px var(--evo)}.cd.hero{box-shadow:inset 0 0 0 2px var(--hero)}.cd.champ{box-shadow:inset 0 0 0 2px var(--champ)}
+.rl.evo{background:var(--evo);color:#fff}.rl.hero{background:var(--hero)}.rl.champ{background:var(--champ)}
+.cd.hit{outline:2px solid var(--gold);outline-offset:1px}
+body.editpics .cd{outline:2px dashed var(--gold);outline-offset:-2px}
+.act{display:flex;gap:8px;margin-top:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--bg2);border-radius:11px;padding:9px 12px;font-weight:800;font-size:.86rem;text-decoration:none;color:var(--ink);text-align:center}
+.btn.gold{background:var(--gold);color:#352500;border-color:var(--gold)}
+.btn.grow{flex:1}
+.btn.small{padding:6px 10px;font-size:.8rem}
+.btn.danger{color:var(--loss)}
+.rec{font-weight:900;font-size:.85rem}.w{color:var(--win)}.l{color:var(--loss)}
+.det{margin-top:8px;font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--line);padding-top:8px}
+.det b{color:var(--ink)}
+.det .row{display:flex;flex-wrap:wrap;gap:6px}
+.empty{color:var(--muted);text-align:center;padding:40px 16px}
+.sentinel{height:1px}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg2);border-top:1px solid var(--line);padding-bottom:var(--safe-b);height:calc(var(--nav) + var(--safe-b))}
+.nav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.68rem;font-weight:800;color:var(--muted)}
+.nav button span{font-size:1.25rem;line-height:1}
+.nav button[aria-current="page"]{color:var(--gold)}
+.nav .add span{background:var(--gold);color:#352500;border-radius:12px;width:40px;height:28px;display:grid;place-items:center;font-size:1.3rem;font-weight:900}
+.sheet-bg{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.55);display:flex;align-items:flex-end}
+.sheet{width:100%;max-height:88vh;overflow-y:auto;background:var(--panel);border-radius:18px 18px 0 0;padding:14px 14px calc(16px + var(--safe-b));display:flex;flex-direction:column;gap:12px}
+.sheet h2{margin:0;font-size:1.1rem;font-weight:900}
+.lab{font-size:.75rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.fld{display:flex;flex-direction:column;gap:5px}
+select,.inp,textarea{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:16px}
+textarea{min-height:76px;resize:vertical}
+.wrapchips{display:flex;flex-wrap:wrap;gap:6px}
+.sbtns{display:flex;gap:8px}
+.page{display:flex;flex-direction:column;gap:12px;padding:4px}
+.card2{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.card2 h2{margin:0;font-size:1.02rem;font-weight:900}
+.card2 p{margin:0;color:var(--muted);font-size:.86rem}
+.msg{font-size:.85rem;font-weight:700;color:var(--ink)}
+.msg.err{color:var(--loss)}
+.nums{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:4px 4px 10px}
+.num{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.num b{display:block;font-size:1.3rem;font-weight:900;color:var(--gold)}
+.num span{font-size:.75rem;color:var(--muted);font-weight:700}
+.bar2{display:flex;gap:8px;margin:0 4px 8px}
+.bar2 select{flex:1;min-width:0;padding:8px 10px;font-size:.9rem}
+.seg{display:flex;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:3px;margin:0 4px 8px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:7px;font-weight:900;font-size:.85rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--gold);color:#352500}
+.pickgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-height:46vh;overflow-y:auto}
+.pickgrid .cd{font-size:.58rem;border:0}
+.pickgrid .cd.on{outline:3px solid var(--gold);outline-offset:-3px;opacity:.55}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.slots .cd{border:0}
+.slots .cd.emptyslot{background:var(--bg2);border:1px dashed var(--line);color:var(--muted)}
+.hint{font-size:.78rem;color:var(--muted)}
+.unk{display:grid;grid-template-columns:1fr 70px;gap:6px;align-items:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + var(--safe-b) + 14px);z-index:60;background:var(--ink);color:#0e1730;font-weight:800;font-size:.86rem;border-radius:12px;padding:10px 14px;max-width:90vw;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+label.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center}
+.only{display:flex;align-items:center;gap:8px;margin:0 4px 8px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="trow"><h1 id="ttl">My decks</h1><span class="count" id="count"></span></div>
+  <div class="srow" id="srow"><input type="search" class="search" id="q" placeholder="Search a card or deck" autocomplete="off" aria-label="Search"><button class="ibtn" id="fbtn" type="button">Filters <span class="badge" id="fbadge" hidden></span></button></div>
+  <div class="chips" id="secchips" role="group" aria-label="Section"></div>
+</header>
+<main id="out"></main>
+<nav class="nav" aria-label="Sections">
+  <button type="button" data-v="lib" aria-current="page"><span>🃏</span>Decks</button>
+  <button type="button" data-v="fav"><span>♥</span>Favorites</button>
+  <button type="button" data-v="bat"><span>⚔</span>Battles</button>
+  <button type="button" data-v="add" class="add"><span>+</span>Add</button>
+  <button type="button" data-v="more"><span>⋯</span>More</button>
+</nav>
+<div id="sheet" class="sheet-bg" hidden><div class="sheet" id="sheetBody" role="dialog" aria-modal="true"></div></div>
+<input type="file" id="picfile" accept="image/*" class="vh" aria-hidden="true" tabindex="-1">
+<div id="toast" class="toast" hidden role="status"></div>
+<script src="data.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const uniq=a=>[...new Set(a)];
+const CARDS=DATA.cards;
+for(const [n,[id,c]] of Object.entries(NAMEID)) if(!CARDS[id]) CARDS[id]=[n,c];
+const EVO=new Set(DATA.evo), HERO=new Set(DATA.hero), CHAMPS=new Set(DATA.champ);
+const TTID={"Tower Princess":159000000,"Cannoneer":159000001,"Dagger Duchess":159000002,"Royal Chef":159000004};
+const TTNAME=Object.fromEntries(Object.entries(TTID).map(([k,v])=>[v,k]));
+const typeOf=id=>{const t=String(id).slice(0,2);return t==="27"?"building":t==="28"?"spell":"troop"};
+const normId=id=>id===36000000?26000000:id===36000002?26000002:id;
+const cname=id=>(CARDS[id]||CUSTOM[id]||["Card "+id,0])[0];
+const ccost=id=>(CARDS[id]||CUSTOM[id]||["",0])[1];
+const dkey=ids=>[...ids].map(Number).sort((a,b)=>a-b).join("-");
+const lsGet=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(_){return d}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));return true}catch(_){toast("Couldn't save on this device: storage is full or blocked.");return false}};
+let CUSTOM=lsGet("crd-cards",{}); // cards the app didn't know: id -> [name, cost]
+for(const [id,v] of Object.entries(CUSTOM)) if(!CARDS[id]) CARDS[id]=v;
+function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>el.hidden=true,2600)}
+
+/* ---------- decks ---------- */
+const BASE=DATA.decks.map((d,i)=>({...d,i,key:dkey(d.ids),active:0,user:false,oppOnly:d.variants.every(v=>v.srcs.length&&v.srcs.every(x=>/^Opponent's deck \(/.test(x)))}));
+let USER=lsGet("crd-user",[]);       // decks you added: {key, title, arch, notes, added, variants:[{roles, order, tt}]}
+let HIDDEN=new Set(lsGet("crd-hidden",[]));
+let D=[], BYKEY={};
+function specialsOf(roles,order){const r=[];for(const id of order){const k=roles[id];if(k==="evo")r.push("Evo "+cname(id));else if(k==="hero")r.push("Hero "+cname(id));}for(const id of order)if(CHAMPS.has(cname(id)))r.push(cname(id));return r}
+function linkOf(order,tt){return "https://link.clashroyale.com/en/?clashroyale://copyDeck?deck="+order.join(";")+"&l=Royals"+(tt?"&tt="+tt:"")}
+function fmtDate(t){return new Date(t).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"})}
+function userVariant(u,v){const order=v.order.map(Number);const roles={};for(const [k,x] of Object.entries(v.roles||{}))roles[k]=x;
+  return {roles,tt:v.tt?String(v.tt):"",link:linkOf(order,v.tt),order,uses:null,wr:null,srcs:["Added by you · "+fmtDate(v.added||u.added)],mine:null,era:"now",names:[u.title],specials:specialsOf(roles,order),earliest:"",earliestWhy:"",eraLabel:"Added "+fmtDate(v.added||u.added),tower:TTNAME[v.tt]||"Tower Princess",user:true}}
+function rebuild(){
+  BYKEY={};D=[];
+  for(const d of BASE){const c={...d,variants:d.variants.slice(),notes:d.notes.slice()};D.push(c);BYKEY[c.key]=c}
+  for(const u of USER){
+    const ex=BYKEY[u.key];const vs=u.variants.map(v=>userVariant(u,v));
+    if(ex&&!ex.user){ex.variants=vs.concat(ex.variants);ex.userAdd=u;ex.oppOnly=false;if(u.notes)ex.notes.unshift(u.notes);if(u.title&&u.title!==ex.title)ex.aka=[u.title,...(ex.aka||[])];continue}
+    const ids=u.variants[0].order.map(Number);const costs=ids.map(ccost);
+    const d={ids,title:u.title||autoTitle(u.variants[0].roles,ids),aka:[],arch:u.arch||[],era:"now",eraLabel:"Added by you",avg:costs.reduce((a,b)=>a+b,0)/8,cycle:[...costs].sort((a,b)=>a-b).slice(0,4).reduce((a,b)=>a+b,0),variants:vs,mine:null,notes:u.notes?[u.notes]:[],pop:0,swaps:[],i:D.length,key:u.key,active:0,user:true,userAdd:u,added:u.added};
+    D.push(d);BYKEY[d.key]=d}
+  D.forEach((d,i)=>d.i=i);
+  ARCHS=uniq(D.flatMap(d=>d.arch)).sort();
+}
+let ARCHS=[];
+function autoTitle(roles,ids){const sp=ids.filter(id=>roles[id]).map(id=>(roles[id]==="evo"?"Evo ":"Hero ")+cname(id));const win=ids.find(id=>["Hog Rider","Royal Giant","Golem","Giant","Balloon","Graveyard","X-Bow","Mortar","Miner","Goblin Barrel","Royal Hogs","Lava Hound","Electro Giant","P.E.K.K.A","Mega Knight","Goblin Drill","Ram Rider","Battle Ram","Wall Breakers","Three Musketeers","Elixir Golem","Sparky","Giant Skeleton","Goblin Giant","Skeleton Barrel","Rune Giant","Boss Bandit","Goblinstein"].includes(cname(id)));
+  return [win?cname(win):null,...sp].filter(Boolean).slice(0,3).join(" · ")||ids.slice(0,3).map(cname).join(" · ")}
+function saveUser(){lsSet("crd-user",USER);rebuild()}
+
+/* ---------- pictures ---------- */
+const BPICS=new Set(BUNDLED_PICS);let UPICS={},PIDB=null,EDIT=false;
+function picFor(cid,form){const k=cid+"_"+form, b=cid+"_base";
+  if(k in UPICS)return UPICS[k]; if(BPICS.has(k))return "pics/"+k+".webp";
+  if(form!=="base"){if(b in UPICS)return UPICS[b];if(BPICS.has(b))return "pics/"+b+".webp"}
+  return null}
+function idbOpen(name,store,opts){return new Promise((res,rej)=>{const r=indexedDB.open(name,1);r.onupgradeneeded=()=>r.result.createObjectStore(store,opts);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function idbDo(db,store,mode,fn){return new Promise((res,rej)=>{const tx=db.transaction(store,mode);const o=fn(tx.objectStore(store));tx.oncomplete=()=>res(o&&o.result);tx.onerror=()=>rej(tx.error)})}
+async function loadPics(){try{PIDB=PIDB||await idbOpen("crd-pics","pics");const keys=await idbDo(PIDB,"pics","readonly",s=>s.getAllKeys());const m={};
+  for(const k of keys){const b=await idbDo(PIDB,"pics","readonly",s=>s.get(k));m[k]=b?URL.createObjectURL(b):null}
+  Object.values(UPICS).forEach(u=>u&&URL.revokeObjectURL(u));UPICS=m}catch(_){}}
+
+/* ---------- tiles ---------- */
+function tile(id,role,hit){id=Number(id);const cid=normId(id);const n=cname(id);const r=role||(CHAMPS.has(n)?"champ":"");const form=r==="evo"||r==="hero"?r:"base";const pic=picFor(cid,form);
+  const rl=r?{evo:"EVO",hero:"HERO",champ:"CHAMP"}[r]:"";
+  return `<div class="cd ${typeOf(id)} ${r}${pic?" pic":""}${hit?" hit":""}" data-card="${cid}" data-form="${form}" title="${esc(n)}">${pic?`<img src="${esc(pic)}" alt="" loading="lazy" decoding="async">`:""}<span class="cost">${ccost(id)}</span>${rl?`<span class="rl ${r}">${rl}</span>`:""}<span class="nm">${esc(n)}</span></div>`}
+
+/* ---------- favorites ---------- */
+let FAVS=lsGet("crd-favs",null);
+if(!FAVS){FAVS={};for(const f of SEEDFAV)FAVS[f.k]=f;lsSet("crd-favs",FAVS)}
+const isFav=k=>!!FAVS[k];
+function favBtn(k){const on=isFav(k);return `<button class="fav" type="button" data-fav="${k}" aria-pressed="${on}" aria-label="${on?"Remove from favorites":"Add to favorites"}">${on?"♥":"♡"}</button>`}
+
+/* ---------- state ---------- */
+let VIEW="lib";
+let S={sec:"all",q:"",arch:"",spec:"",era:"",tower:"",sort:"pop",only:null};
+let BV={side:"played",mode:"",sort:""};
+const ERA_OPTS=[["","All meta periods"],["now","Oct 2026 · current"],["sep","Sep 2026"],["3slot","Mar–Aug 2026 · 3-slot era"],["4slot","Dec 2025–Mar 2026 · 4-slot era"]];
+const SECS=[["all","All"],["main","★ Main"],["mine","I play"],["user","Added by me"],["tr","Trophy Road"],["war","Clan war"],["now","Current"],["prev","Older"]];
+const PICKS=[["Golem",{arch:"Golem"}],["Rune Giant",{arch:"Rune Giant"}],["Evo E-Giant",{spec:"Evo Electro Giant"}],["Sparky",{arch:"Sparky"}],["LumberLoon",{arch:"LumberLoon"}],["Giant Prince",{arch:"Giant Prince"}],["Evo Lumberjack",{spec:"Evo Lumberjack"}],["Hero Balloon",{spec:"Hero Balloon"}],["Miner Loon",{arch:"Miner Loon"}],["Log Bait",{arch:"Log Bait"}],["Dagger Duchess",{tower:"Dagger Duchess"}],["Cannoneer",{tower:"Cannoneer"}]];
+const SORTS=[["pop","Most popular first"],["fav","Favorites first"],["new","Newest added first"],["mywr","My best win rate"],["mygames","Most played by me"],["low","Cheapest first"],["high","Heaviest first"],["name","A to Z"]];
+try{const p=lsGet("crd-prefs",{});if(p.sort)S.sort=p.sort;if(p.bv)BV=Object.assign(BV,p.bv)}catch(_){}
+function savePrefs(){lsSet("crd-prefs",{sort:S.sort,bv:BV})}
+
+function matchDeck(d){
+  if(HIDDEN.has(d.key)&&S.sec!=="hidden")return false;
+  if(S.only!=null)return d.i===S.only;
+  if(S.sec==="mine"&&!d.mine)return false;
+  if(S.sec==="main"&&!d.tier)return false;
+  if(S.sec==="user"&&!d.userAdd)return false;
+  if(S.sec==="tr"&&!(d.slot&&d.slot.tr))return false;
+  if(S.sec==="war"&&!(d.slot&&(d.slot.war||d.slot.waralt)))return false;
+  if(S.sec==="now"&&d.era!=="now")return false;
+  if(S.sec==="prev"&&d.era==="now")return false;
+  if(S.arch&&!d.arch.includes(S.arch))return false;
+  if(S.spec&&!d.variants.some(v=>v.specials.includes(S.spec)))return false;
+  if(S.era&&!d.variants.some(v=>v.era===S.era))return false;
+  if(S.tower&&!d.variants.some(v=>v.tower===S.tower))return false;
+  if(S.q){const s=S.q.toLowerCase();if(!d.hay)d.hay=[d.title,...(d.aka||[]),...d.arch,...d.ids.map(cname),...d.variants.flatMap(v=>v.specials)].join(" ").toLowerCase();if(!d.hay.includes(s))return false}
+  return true}
+function bestVar(d){const ok=d.variants.map((v,k)=>((!S.spec||v.specials.includes(S.spec))&&(!S.era||v.era===S.era)&&(!S.tower||v.tower===S.tower))?k:-1).filter(k=>k>=0);return ok.includes(d.active)?d.active:(ok[0]??0)}
+function varOrder(v){if(v.order)return v.order.map(Number);const m=v.link.match(/deck=([\d;]+)/);return m?m[1].split(";").map(Number):[]}
+function fmtUses(v){if(v.uses==null)return "";return v.uses.toLocaleString()+(v.srcs.some(s=>s.includes("RoyaleTracker"))?" games":" battles")+(v.wr!=null?` · ${v.wr}% WR`:"")}
+function cmp(){const wr=d=>d.mine&&(d.mine[0]+d.mine[1])?d.mine[0]/(d.mine[0]+d.mine[1]):-1,gm=d=>d.mine?d.mine[0]+d.mine[1]:0,fv=d=>isFav(d.key)?1:0,tw=d=>d.tier==="main"?2:d.tier==="test"?1:0;
+  const pop=(a,b)=>tw(b)-tw(a)||(b.mine?1:0)-(a.mine?1:0)||(b.user?1:0)-(a.user?1:0)||b.pop-a.pop||a.title.localeCompare(b.title);
+  return {pop,fav:(a,b)=>fv(b)-fv(a)||pop(a,b),new:(a,b)=>(b.added||b.i)-(a.added||a.i),mywr:(a,b)=>wr(b)-wr(a)||gm(b)-gm(a)||pop(a,b),mygames:(a,b)=>gm(b)-gm(a)||wr(b)-wr(a)||pop(a,b),low:(a,b)=>a.avg-b.avg,high:(a,b)=>b.avg-a.avg,name:(a,b)=>a.title.localeCompare(b.title)}[S.sort]||pop}
+
+function deckHTML(d){
+  const vi=bestVar(d), v=d.variants[vi], q=S.q.toLowerCase(), order=varOrder(v);
+  const tabs=d.variants.length>1?`<div class="tabs" role="tablist">${d.variants.map((x,k)=>`<button class="tab" type="button" role="tab" aria-selected="${k===vi}" data-tab="${k}">${esc(x.specials.join(" + ")||"No evo / hero")}<small>${x.user?"added by you":x.uses!=null?esc(fmtUses(x)):x.mine?"my deck":esc(x.eraLabel)}</small></button>`).join("")}</div>`:"";
+  const tags=[d.tier==="main"?`<span class="tag main">★ Main deck</span>`:d.tier==="test"?`<span class="tag">Worth testing</span>`:"",d.mine?`<span class="tag mine">I play this · ${d.mine[0]}W ${d.mine[1]}L</span>`:"",d.slot&&d.slot.tr?`<span class="tag slot">Trophy Road ${d.slot.tr.join(" & ")}</span>`:"",d.slot&&d.slot.war?`<span class="tag war">Clan war ${d.slot.war.join(" & ")}</span>`:"",d.userAdd?`<span class="tag user">Added by me</span>`:""].join("");
+  const sub=[d.arch.slice(0,2).join(" · "),v.tower!=="Tower Princess"?v.tower:""].filter(Boolean).join(" · ")||esc(v.eraLabel);
+  return `<article class="dk${d.tier==="main"?" main":""}" data-i="${d.i}"><div class="dh"><div class="dt"><h3>${esc(d.title)}</h3><div class="sub">${esc(sub)}</div></div><span class="elx"><span class="drop"></span>${d.avg.toFixed(1)}</span>${favBtn(d.key)}</div>
+  ${tags?`<div class="tags">${tags}</div>`:""}${tabs}<div class="cards">${order.map(id=>tile(id,v.roles[String(id)]||v.roles[String(normId(id))],q&&cname(id).toLowerCase().includes(q))).join("")}</div>
+  <div class="act"><button class="btn small" type="button" data-more>Details</button><span style="flex:1"></span><a class="btn gold" href="${esc(v.link)}">Open in game</a></div><div class="det" hidden></div></article>`}
+function detHTML(d){const v=d.variants[bestVar(d)];
+  return `${v.earliest?`<span>Earliest possible: <b>${esc(v.earliest)}</b>${v.earliestWhy?" ("+esc(v.earliestWhy)+")":""}</span>`:""}<span>Seen in: <b>${esc(v.eraLabel)}</b> · cycle ${d.cycle}</span><span>Source: ${esc(v.srcs.join("; "))}${v.uses!=null?" · <b>"+esc(fmtUses(v))+"</b>":""}</span>
+  ${d.notes.length?`<span>${esc(d.notes.join(" "))}</span>`:""}
+  ${d.swaps.length?`<div class="row">Close variants: ${d.swaps.map(w=>D[w.to]?`<button class="btn small" type="button" data-go="${w.to}">−${esc(w.out)} +${esc(w.inn)}</button>`:"").join("")}</div>`:""}
+  <div class="row">${d.arch.map(a=>`<button class="btn small" type="button" data-arch="${esc(a)}">${esc(a)}</button>`).join("")}</div>
+  <div class="row">${d.userAdd?`<button class="btn small" type="button" data-edit>Edit</button><button class="btn small danger" type="button" data-del>Delete my version</button>`:""}<button class="btn small" type="button" data-hide>${HIDDEN.has(d.key)?"Unhide":"Hide this deck"}</button><button class="btn small" type="button" data-copy>Copy link</button></div>`}
+
+/* ---------- list rendering in chunks ---------- */
+let ITEMS=[],SHOWN=0,IO=null;const CHUNK=12;
+function paint(items,headHTML){ITEMS=items;SHOWN=0;$("out").innerHTML=(headHTML||"")+`<div id="list"></div><div class="sentinel" id="sent"></div>`;more();
+  if(IO)IO.disconnect();IO=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting))more()},{rootMargin:"900px"});IO.observe($("sent"))}
+function more(){if(SHOWN>=ITEMS.length)return;const part=ITEMS.slice(SHOWN,SHOWN+CHUNK);SHOWN+=part.length;$("list").insertAdjacentHTML("beforeend",part.map(it=>it.h!=null?it.h:it.f()).join(""))}
+
+function renderLib(){
+  let list=D.filter(d=>(!d.oppOnly||S.only!=null||S.q)&&matchDeck(d)).sort(cmp());
+  $("count").textContent=list.length+" deck"+(list.length===1?"":"s");
+  const head=S.only!=null?`<div class="only"><span class="hint">Showing one deck.</span><button class="btn small" type="button" data-showall>Show all decks</button></div>`:"";
+  if(!list.length){$("out").innerHTML=head+`<p class="empty">No deck matches. Clear a filter or search a shorter card name.</p>`;return}
+  const items=[];
+  if(S.sort==="pop"&&S.only==null){const groups=[["main","★ Main decks","Your two decks with a winning record over 30+ ranked games, then the ones worth testing."],["mine","Decks I play","Decks from your imported battles, with your record."],["user","Added by me",""],["now","Current meta · Oct 2026",""],["sep","Sep 2026",""],["old","Older decks",""]];
+    const gOf=d=>d.tier?"main":d.mine?"mine":(d.user?"user":d.era==="now"?"now":d.era==="sep"?"sep":"old");
+    for(const [k,t,n] of groups){const ds=list.filter(d=>gOf(d)===k);if(!ds.length)continue;items.push({h:`<h2 class="sec">${t} <span class="count">${ds.length}</span></h2>${n?`<p class="secn">${n}</p>`:""}`});ds.forEach(d=>items.push({f:()=>deckHTML(d)}))}}
+  else list.forEach(d=>items.push({f:()=>deckHTML(d)}));
+  paint(items,head)}
+
+function renderFav(){const q=S.q.toLowerCase();
+  const lib=D.filter(d=>isFav(d.key)&&(!q||matchDeck(d))).sort((a,b)=>(FAVS[b.key].at||0)-(FAVS[a.key].at||0));
+  const extra=Object.entries(FAVS).filter(([k,f])=>!BYKEY[k]&&f.names&&(!q||f.names.some(n=>n.toLowerCase().includes(q))));
+  const n=lib.length+extra.length;$("count").textContent=n+" favorite"+(n===1?"":"s");
+  if(!n){$("out").innerHTML=`<p class="empty">${Object.keys(FAVS).length?"No favorite matches this search.":"No favorites yet. Tap ♡ on any deck."}</p>`;return}
+  paint(lib.map(d=>({f:()=>deckHTML(d)})).concat(extra.map(([k,f])=>({f:()=>favOnlyHTML(k,f)}))))}
+function favOnlyHTML(k,f){const ids=f.names.map(n=>NAMEID[n]&&NAMEID[n][0]);const roles={};f.names.forEach((n,i)=>{if(f.roles&&f.roles[n])roles[ids[i]]=f.roles[n]});
+  return `<article class="dk" data-fk="${k}"><div class="dh"><div class="dt"><h3>${esc(bLabel(f.names,f.roles||{}))}</h3><div class="sub">Saved from your battles${f.tower?" · "+esc(f.tower):""}</div></div>${favBtn(k)}</div><div class="cards">${ids.map(id=>id?tile(id,roles[id]):"").join("")}</div>
+  <div class="act"><button class="btn small" type="button" data-save-names="${esc(JSON.stringify({names:f.names,roles:f.roles||{},tower:f.tower||""}))}">Save to my decks</button><span style="flex:1"></span>${bLink(f.names,f.tower)?`<a class="btn gold" href="${esc(bLink(f.names,f.tower))}">Open in game</a>`:""}</div></article>`}
+
+/* ---------- battles ---------- */
+let BSTORE=[],BIDB=null;
+const BMODES={pathOfLegend:"Ranked (Path of Legends)",PvP:"Trophy Road",challenge:"Challenges",riverRacePvP:"Clan war",friendly:"Friendly"};
+const bDate=t=>new Date(t.replace(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d).*$/,"$1-$2-$3T$4:$5:$6Z"));
+const bFmt=t=>bDate(t).toLocaleDateString(undefined,{day:"numeric",month:"short"});
+function allBattles(){const m={};BSEED.forEach(b=>m[b.t]=b);BSTORE.forEach(b=>{if(b&&b.t)m[b.t]=b});
+  Object.values(m).forEach(b=>{if(b.ci)for(const [n,v] of Object.entries(b.ci)){if(!NAMEID[n])NAMEID[n]=v;if(!CARDS[v[0]])CARDS[v[0]]=[n,v[1]]}});
+  return Object.values(m).sort((a,b)=>a.t<b.t?-1:1)}
+function bLink(cards,tower){const ids=cards.map(n=>NAMEID[n]&&NAMEID[n][0]);if(cards.length!==8||ids.some(x=>!x))return "";return linkOf(ids,TTID[tower])}
+function bAvg(cards){const c=cards.map(n=>NAMEID[n]&&NAMEID[n][1]).filter(x=>x!=null);return c.length?c.reduce((a,b)=>a+b,0)/c.length:0}
+function bKey(cards){const ids=cards.map(n=>NAMEID[n]&&NAMEID[n][0]);return ids.some(x=>!x)?null:dkey(ids)}
+function bLabel(cards,roles){const sp=cards.filter(n=>roles[n]).map(n=>(roles[n]==="evo"?"Evo ":"Hero ")+n);const ch=cards.filter(n=>!roles[n]&&CHAMPS.has(n));return [...sp,...ch].slice(0,3).join(" · ")||cards.slice(0,3).join(" · ")}
+function bGroup(B,mine){const g={};B.forEach(b=>{const cs=mine?b.cards:b.opp;if(!cs||cs.length<8)return;const ro=(mine?b.roles:b.oroles)||{};const k=[...cs].sort().join("|")+"#"+Object.entries(ro).sort().join();(g[k]=g[k]||{g:[]}).g.push(b)});
+  return Object.values(g).map(d=>{d.last=d.g[d.g.length-1];d.cards=mine?d.last.cards:d.last.opp;d.roles=(mine?d.last.roles:d.last.oroles)||{};d.tower=(mine?d.last.tower:d.last.otower)||"";d.w=d.g.filter(b=>b.me>b.op).length;d.l=d.g.length-d.w;return d})}
+function bDeckHTML(d,mine,q){const n=d.g.length,k=bKey(d.cards),lib=k&&BYKEY[k]&&!BYKEY[k].oppOnly?BYKEY[k]:null,link=bLink(d.cards,d.tower);
+  if(k)BFAV[k]={names:d.cards,roles:d.roles,tower:d.tower};
+  return `<article class="dk"><div class="dh"><div class="dt"><h3>${esc(lib?lib.title:bLabel(d.cards,d.roles))}</h3><div class="sub">${mine?"Last played":"Last faced"} ${esc(bFmt(d.last.t))}${d.tower?" · "+esc(d.tower):""}</div></div><span class="elx"><span class="drop"></span>${bAvg(d.cards).toFixed(1)}</span>${k?favBtn(k):""}</div>
+  <div class="tags"><span class="tag"><span class="rec"><span class="w">${d.w}W</span> <span class="l">${d.l}L</span></span> · ${n===1?"1 game":n+" games"} · ${Math.round(d.w/n*100)}%${mine?"":" for you"}</span></div>
+  <div class="cards">${d.cards.map(c=>{const x=NAMEID[c];return x?tile(x[0],d.roles[c],q&&c.toLowerCase().includes(q)):""}).join("")}</div>
+  <div class="act">${lib?`<button class="btn small" type="button" data-go="${lib.i}">In my decks →</button>`:`<button class="btn small" type="button" data-save-names="${esc(JSON.stringify({names:d.cards,roles:d.roles,tower:d.tower}))}">Save to my decks</button>`}<span style="flex:1"></span>${link?`<a class="btn gold" href="${esc(link)}">Open in game</a>`:""}</div></article>`}
+const BFAV={};
+function renderBat(){const mine=BV.side==="played";const all=allBattles();const modes=uniq(all.map(b=>b.mode));
+  if(!BV.mode)BV.mode=modes.includes("pathOfLegend")?"pathOfLegend":"all";
+  const sorts=mine?[["games","Most played"],["recent","Most recent"],["wr","Best win rate"]]:[["recent","Most recent"],["faced","Most faced"],["lost","Lost to most"]];
+  if(!sorts.some(s=>s[0]===BV.sort))BV.sort=sorts[0][0];
+  const B=all.filter(b=>BV.mode==="all"||b.mode===BV.mode);const q=S.q.toLowerCase();
+  let L=bGroup(B,mine);if(q)L=L.filter(d=>d.cards.some(c=>c.toLowerCase().includes(q)));
+  const rec=(a,b)=>a.last.t<b.last.t?1:-1,so=BV.sort;
+  L.sort(so==="games"||so==="faced"?(a,b)=>b.g.length-a.g.length||rec(a,b):so==="wr"?(a,b)=>b.w/b.g.length-a.w/a.g.length||b.g.length-a.g.length:so==="lost"?(a,b)=>b.l-a.l||a.w-b.w||rec(a,b):rec);
+  $("count").textContent=L.length+" deck"+(L.length===1?"":"s");
+  const games=L.reduce((a,d)=>a+d.g.length,0),w=L.reduce((a,d)=>a+d.w,0);
+  const head=`<div class="seg" role="group"><button type="button" data-side="played" aria-pressed="${mine}">Decks I played</button><button type="button" data-side="opp" aria-pressed="${!mine}">Opponents' decks</button></div>
+  <div class="bar2"><select id="bmode" aria-label="Game mode"><option value="all">All modes</option>${modes.map(m=>`<option value="${esc(m)}"${m===BV.mode?" selected":""}>${esc(BMODES[m]||m)}</option>`).join("")}</select><select id="bsort" aria-label="Sort">${sorts.map(([k,l])=>`<option value="${k}"${k===BV.sort?" selected":""}>${l}</option>`).join("")}</select></div>
+  <div class="nums"><div class="num"><b>${L.length}</b><span>${mine?"decks played":"decks faced"}</span></div><div class="num"><b>${w}–${games-w}</b><span>record · ${games?Math.round(w/games*100):0}%</span></div></div>
+  <div class="bar2"><label class="btn grow">Import RoyaleAPI battle CSV<input type="file" id="bimp" class="vh" accept=".csv,text/csv,text/plain,*/*" multiple></label></div><p class="hint" id="bstat" style="margin:0 4px 8px"></p>`;
+  if(!L.length){$("out").innerHTML=head+`<p class="empty">${B.length?"No deck has that card.":"No battles yet. Import a RoyaleAPI battle CSV."}</p>`;wireBat();return}
+  paint(L.map(d=>({f:()=>bDeckHTML(d,mine,q)})),head);wireBat()}
+function wireBat(){const m=$("bmode"),s=$("bsort"),f=$("bimp");if(m)m.onchange=()=>{BV.mode=m.value;savePrefs();render()};if(s)s.onchange=()=>{BV.sort=s.value;savePrefs();render()};if(f)f.onchange=importCSV}
+function parseCSV(text){const rows=[];let row=[],f="",q=false;for(let i=0;i<text.length;i++){const c=text[i];
+  if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===','){row.push(f);f=""}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=""}else f+=c}
+  if(f!==""||row.length){row.push(f);rows.push(row)}const h=rows.shift()||[];return rows.filter(r=>r.length>1).map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i]??""])))}
+function toBattle(r){if(!r.battleTime||!r.team_0_cards_0_name)return null;const num=x=>x===""||x==null?null:Number(x);const ci={};
+  const side=p=>{const cards=[],roles={};for(let k=0;k<8;k++){const n=r[`${p}_cards_${k}_name`];if(!n)continue;cards.push(n);const ev=parseFloat(r[`${p}_cards_${k}_evolutionLevel`]);if(ev>0)roles[n]=ev>=2?"hero":"evo";const id=num(r[`${p}_cards_${k}_id`]),c=num(r[`${p}_cards_${k}_elixirCost`]);if(id)ci[n]=[id,c??0]}return{cards,roles}};
+  const me=side("team_0"),op=side("opponent_0");if(me.cards.length<8)return null;
+  return{t:r.battleTime,mode:r.type||"",cards:me.cards,roles:me.roles,tower:r.team_0_supportCards_0_name||"",me:num(r.team_0_crowns)??0,op:num(r.opponent_0_crowns)??0,leak:num(r.team_0_elixirLeaked)??0,opp:op.cards,oroles:op.roles,otower:r.opponent_0_supportCards_0_name||"",ci}}
+async function loadBattles(){try{BIDB=BIDB||await idbOpen("crd-battles","battles",{keyPath:"t"});BSTORE=await idbDo(BIDB,"battles","readonly",s=>s.getAll())}catch(_){BIDB=null}}
+async function importCSV(e){const files=[...e.target.files];e.target.value="";if(!files.length)return;const st=$("bstat");st.textContent="Reading…";
+  try{await loadBattles();if(!BIDB)throw 0;const have=new Set(allBattles().map(b=>b.t));let found=0,added=0;
+    for(const f of files)for(const r of parseCSV(await f.text())){const b=toBattle(r);if(!b)continue;found++;if(have.has(b.t))continue;await idbDo(BIDB,"battles","readwrite",s=>s.put(b));have.add(b.t);added++}
+    await loadBattles();render();toast(found?`Added ${added} new game${added===1?"":"s"}; ${found-added} already here.`:"No battles found. Use the battle CSV export from RoyaleAPI.")}
+  catch(_){st.textContent="Import stopped. Try the same file again; games already saved are skipped."}}
+
+/* ---------- add / edit a deck ---------- */
+let ED=null; // {order:[ids], roles:{}, tt, title, arch, notes, editing:key|null, unknown:[]}
+const slug=s=>s.toLowerCase().replace(/\./g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+const BYSLUG={};for(const [id,[n]] of Object.entries(CARDS))BYSLUG[slug(n)]=Number(id);
+function parseDeckText(t){t=String(t||"").trim();if(!t)return null;let dec=t;try{dec=decodeURIComponent(t.replace(/%(?![0-9a-f]{2})/gi,"%25"))}catch(_){}
+  let m=dec.match(/deck=([0-9;,\s]+)/i);
+  if(m){const ids=m[1].split(/[;,\s]+/).filter(Boolean).map(Number);const tt=(dec.match(/[?&]tt=(\d+)/)||[])[1]||"";return {order:ids.slice(0,8),tt,fromLink:true}}
+  m=dec.match(/decks\/stats\/([a-z0-9,\-]+)/i);
+  if(m){const roles={},order=[];for(let s of m[1].split(",")){let r="";if(/-ev1$/.test(s)){r="evo";s=s.replace(/-ev1$/,"")}else if(/-hero$/.test(s)){r="hero";s=s.replace(/-hero$/,"")}const id=BYSLUG[s];if(id){order.push(id);if(r)roles[id]=r}}return order.length?{order:order.slice(0,8),roles,tt:""}:null}
+  const names=dec.split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean);const order=[];for(const n of names){const id=BYSLUG[slug(n.replace(/^(evo|hero)\s+/i,""))];if(id)order.push(id)}
+  return order.length>=1?{order:order.slice(0,8),roles:{},tt:""}:null}
+function canEvo(id){return EVO.has(cname(id))}function canHero(id){return HERO.has(cname(id))}
+function defaultRoles(order){const roles={};const a=order[0],b=order[1],c=order[2];
+  if(a&&canEvo(a))roles[a]="evo";
+  if(b){if(canHero(b))roles[b]="hero";else if(canEvo(b)&&!roles[a])roles[b]="evo"}
+  if(c){if(canEvo(c))roles[c]="evo";else if(canHero(c))roles[c]="hero"}
+  return roles}
+function startAdd(parsed,extra){ED={order:[],roles:{},tt:"",title:"",arch:"",notes:"",editing:null,...(extra||{})};
+  if(parsed){ED.order=parsed.order.map(Number);ED.tt=parsed.tt||"";ED.roles=parsed.roles&&Object.keys(parsed.roles).length?parsed.roles:(parsed.fromLink?defaultRoles(ED.order):{})}
+  setView("add")}
+function renderAdd(){$("count").textContent="";
+  if(!ED){$("out").innerHTML=`<div class="page">
+    <section class="card2"><h2>Add a deck from Clash Royale</h2><p>In the game, open the deck and tap <b>Share</b>, then choose <b>CR Decks</b>. The deck opens here, ready to save.</p><p>Or copy a deck link (from the game, RoyaleAPI or Deckshop) and paste it below.</p>
+      <textarea id="addtxt" placeholder="Paste a deck link here" aria-label="Deck link"></textarea><div class="sbtns"><button class="btn" type="button" id="addpaste">Paste from clipboard</button><button class="btn gold grow" type="button" id="addgo">Continue</button></div><p class="msg" id="addmsg"></p></section>
+    <section class="card2"><h2>Or build it card by card</h2><p>Pick 8 cards, then mark the evolution and hero slots.</p><button class="btn" type="button" id="addbuild">Pick cards</button></section>
+    <section class="card2"><h2>From your battles</h2><p>Import a RoyaleAPI battle CSV in Battles, then tap <b>Save to my decks</b> on any deck you played or faced.</p></section></div>`;
+    $("addgo").onclick=()=>{const p=parseDeckText($("addtxt").value);if(!p||!p.order.length){$("addmsg").textContent="That doesn't look like a deck link. It should contain deck= followed by card numbers.";$("addmsg").className="msg err";return}startAdd(p)};
+    $("addpaste").onclick=async()=>{try{const t=window.AndroidClip&&AndroidClip.read?AndroidClip.read():await navigator.clipboard.readText();$("addtxt").value=t||"";if(t){const p=parseDeckText(t);if(p&&p.order.length)startAdd(p)}}catch(_){ $("addmsg").textContent="Clipboard reading is blocked here. Long-press the box and choose Paste.";$("addmsg").className="msg"}};
+    $("addbuild").onclick=()=>startAdd(null);return}
+  const full=ED.order.length===8;
+  const unknown=ED.order.filter(id=>!CARDS[id]);
+  const slots=[];for(let k=0;k<8;k++){const id=ED.order[k];slots.push(id?`<div data-slot="${k}">${tile(id,ED.roles[id])}</div>`:`<div class="cd emptyslot">${k+1}</div>`)}
+  const existing=full&&BYKEY[dkey(ED.order)]&&!ED.editing?BYKEY[dkey(ED.order)]:null;
+  $("out").innerHTML=`<div class="page"><section class="card2"><h2>${ED.editing?"Edit deck":"New deck"}</h2>
+    <div class="slots" id="slots">${slots.join("")}</div>
+    <p class="hint">${full?"Tap a card to switch it between normal, Evo and Hero, or hold it to remove it.":"Tap cards below to fill the 8 slots. Tap a slot card to change its role; hold it to remove it."}</p>
+    ${unknown.length?`<div class="fld"><span class="lab">New cards: give them a name and elixir</span>${unknown.map(id=>`<div class="unk"><input class="inp" data-unk-n="${id}" placeholder="Name of card ${id}"><input class="inp" data-unk-c="${id}" type="number" min="0" max="10" placeholder="Elixir"></div>`).join("")}</div>`:""}
+    ${existing?`<p class="msg">These 8 cards are already in your decks as “${esc(existing.title)}”. Saving adds this version as a new tab on that deck.</p>`:""}
+    <div class="fld"><span class="lab">Name</span><input class="inp" id="edtitle" value="${esc(ED.title)}" placeholder="${esc(full?autoTitle(ED.roles,ED.order):"Deck name")}"></div>
+    <div class="fld"><span class="lab">Archetype</span><input class="inp" id="edarch" list="archlist" value="${esc(ED.arch)}" placeholder="e.g. Hog Cycle"><datalist id="archlist">${ARCHS.map(a=>`<option value="${esc(a)}">`).join("")}</datalist></div>
+    <div class="fld"><span class="lab">Tower troop</span><select id="edtt">${Object.entries(TTID).map(([n,v])=>`<option value="${v}"${String(v)===String(ED.tt||159000000)?" selected":""}>${n}</option>`).join("")}</select></div>
+    <div class="fld"><span class="lab">Notes</span><textarea id="ednotes" placeholder="Swaps, matchups, anything">${esc(ED.notes)}</textarea></div>
+    <div class="sbtns"><button class="btn" type="button" id="edcancel">Cancel</button><button class="btn gold grow" type="button" id="edsave"${full?"":" disabled"}>Save deck</button></div><p class="msg" id="edmsg"></p></section>
+    ${full?"":`<section class="card2"><input class="search" id="pickq" placeholder="Search cards" autocomplete="off"><div class="pickgrid" id="pickgrid"></div></section>`}</div>`;
+  const keep=()=>{ED.title=$("edtitle").value;ED.arch=$("edarch").value;ED.notes=$("ednotes").value;ED.tt=$("edtt").value};
+  ["edtitle","edarch","ednotes","edtt"].forEach(id=>$(id).addEventListener("input",keep));$("edtt").onchange=keep;
+  let pressT=null,pressed=false;
+  $("slots").querySelectorAll("[data-slot]").forEach(el=>{const k=+el.dataset.slot,id=ED.order[k];
+    el.onpointerdown=()=>{pressed=false;pressT=setTimeout(()=>{pressed=true;keep();ED.order.splice(k,1);delete ED.roles[id];renderAdd()},550)};
+    el.onpointerup=el.onpointerleave=el.onpointercancel=()=>clearTimeout(pressT);
+    el.onclick=()=>{if(pressed)return;keep();const opts=[""].concat(canEvo(id)?["evo"]:[]).concat(canHero(id)?["hero"]:[]);if(opts.length===1){toast(cname(id)+" has no Evo or Hero form.");return}const cur=ED.roles[id]||"";const nx=opts[(opts.indexOf(cur)+1)%opts.length];if(nx)ED.roles[id]=nx;else delete ED.roles[id];
+      const sp=Object.values(ED.roles).filter(Boolean).length;if(sp>3)toast("That's more than 3 Evo/Hero slots. The game allows 3.");renderAdd()};
+    el.oncontextmenu=e=>e.preventDefault()});
+  $("edcancel").onclick=()=>{ED=null;renderAdd()};
+  $("edsave").onclick=()=>{keep();saveEd()};
+  if(!full){const all=Object.keys(CARDS).map(Number).filter(id=>id<29000000&&String(id).slice(0,2)!=="36").sort((a,b)=>ccost(a)-ccost(b)||cname(a).localeCompare(cname(b)));
+    const draw=()=>{const s=$("pickq").value.trim().toLowerCase();$("pickgrid").innerHTML=all.filter(id=>!s||cname(id).toLowerCase().includes(s)).sort((a,b)=>s?((cname(a).toLowerCase()===s?0:cname(a).toLowerCase().startsWith(s)?1:2)-(cname(b).toLowerCase()===s?0:cname(b).toLowerCase().startsWith(s)?1:2)):0).map(id=>`<div data-pick="${id}" class="${ED.order.includes(id)?"on":""}">${tile(id)}</div>`).join("")};
+    draw();$("pickq").oninput=draw;
+    $("pickgrid").onclick=e=>{const p=e.target.closest("[data-pick]");if(!p)return;keep();const id=+p.dataset.pick;const at=ED.order.indexOf(id);if(at>=0){ED.order.splice(at,1);delete ED.roles[id]}else if(ED.order.length<8)ED.order.push(id);renderAdd();if(ED.order.length<8)$("pickq").focus()}}}
+function saveEd(){const msg=$("edmsg");
+  for(const id of ED.order.filter(id=>!CARDS[id])){const n=document.querySelector(`[data-unk-n="${id}"]`).value.trim(),c=parseInt(document.querySelector(`[data-unk-c="${id}"]`).value,10);
+    if(!n||isNaN(c)){msg.textContent="Give each new card a name and an elixir cost.";msg.className="msg err";return}CUSTOM[id]=[n,c];CARDS[id]=[n,c]}
+  lsSet("crd-cards",CUSTOM);
+  const roles={};for(const id of ED.order)if(ED.roles[id])roles[id]=ED.roles[id];
+  // evo/hero cards go first so the game's link puts them in the special slots
+  const sp=ED.order.filter(id=>roles[id]),rest=ED.order.filter(id=>!roles[id]);const order=sp.concat(rest);
+  const key=dkey(order),now=Date.now(),v={order,roles,tt:ED.tt||"159000000",added:now};
+  const arch=ED.arch.trim()?[ED.arch.trim()]:[];
+  if(ED.editing){const u=USER.find(x=>x.key===ED.editing);if(u){USER=USER.filter(x=>x!==u);const nu={...u,key,title:ED.title.trim(),arch,notes:ED.notes.trim(),variants:[{...u.variants[0],...v,added:u.variants[0].added||now}].concat(u.variants.slice(1))};USER.push(nu)}}
+  else{const u=USER.find(x=>x.key===key);if(u){u.variants.unshift(v);if(ED.title.trim())u.title=ED.title.trim();if(arch.length)u.arch=arch;if(ED.notes.trim())u.notes=ED.notes.trim()}else USER.push({key,title:ED.title.trim(),arch,notes:ED.notes.trim(),added:now,variants:[v]})}
+  saveUser();ED=null;toast("Deck saved.");S={...S,sec:"all",q:"",only:BYKEY[key]?BYKEY[key].i:null};$("q").value="";setView("lib")}
+
+/* ---------- more ---------- */
+function renderMore(){$("count").textContent="";const nPics=Object.values(UPICS).filter(Boolean).length+BPICS.size;
+  $("out").innerHTML=`<div class="page">
+  <section class="card2"><h2>Back up or move everything</h2><p>One file with your added decks, favorites, hidden decks, imported battles and the pictures you added. Open it here on another phone, or after reinstalling.</p>
+    <div class="sbtns"><button class="btn gold grow" type="button" id="bksave">Save backup file</button><label class="btn grow">Restore from file<input type="file" id="bkfile" class="vh" accept=".json,application/json,*/*"></label></div><p class="msg" id="bkmsg"></p></section>
+  <section class="card2"><h2>Card pictures</h2><p>${BPICS.size} pictures came with the app. Turn this on, then tap any card in any deck to give it a picture (normal, Evo and Hero forms each get their own).</p>
+    <button class="btn${EDIT?" gold":""}" type="button" id="picmode">${EDIT?"Done adding pictures":"Add or change card pictures"}</button></section>
+  <section class="card2"><h2>Hidden decks</h2><p>${HIDDEN.size?HIDDEN.size+" deck"+(HIDDEN.size===1?" is":"s are")+" hidden.":"No hidden decks. Use Details → Hide this deck to tidy the list."}</p>${HIDDEN.size?`<button class="btn" type="button" id="unhide">Show all hidden decks again</button>`:""}</section>
+  <section class="card2"><h2>About</h2><p>${BASE.filter(d=>!d.oppOnly).length} library decks and ${BSEED.length} battles came with the app; ${USER.length} deck${USER.length===1?"":"s"} added by you. Everything stays on this phone.</p></section></div>`;
+  $("bksave").onclick=saveBackup;$("bkfile").onchange=restoreBackup;
+  $("picmode").onclick=()=>{EDIT=!EDIT;document.body.classList.toggle("editpics",EDIT);if(EDIT){toast("Tap any card to set its picture.");setView("lib")}else renderMore()};
+  if($("unhide"))$("unhide").onclick=()=>{HIDDEN.clear();lsSet("crd-hidden",[]);renderMore();toast("All decks are visible again.")}}
+async function blobToData(b){return await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)})}
+async function saveBackup(){const msg=$("bkmsg");msg.textContent="Preparing…";
+  try{const pics={};if(PIDB){const keys=await idbDo(PIDB,"pics","readonly",s=>s.getAllKeys());for(const k of keys){const b=await idbDo(PIDB,"pics","readonly",s=>s.get(k));pics[k]=b?await blobToData(b):null}}
+    await loadBattles();
+    const json=JSON.stringify({app:"cr-decks",v:1,at:Date.now(),user:USER,favs:FAVS,hidden:[...HIDDEN],cards:CUSTOM,battles:BSTORE,pics});
+    const d=new Date(),z=n=>String(n).padStart(2,"0"),name=`cr-decks-backup-${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}.json`;
+    if(window.AndroidFile){AndroidFile.save(name,json);msg.textContent="Choose where to save the file…";return}
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([json],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();a.remove();msg.textContent="Backup downloaded."}
+  catch(e){msg.textContent="Couldn't make the backup: "+(e.message||e)}}
+window.onAndroidSaved=ok=>{const m=$("bkmsg");if(m)m.textContent=ok?"Backup saved.":"The file wasn't saved."};
+let PENDING=null;
+async function restoreBackup(e){const f=e.target.files[0];e.target.value="";if(!f)return;const msg=$("bkmsg");
+  try{const j=JSON.parse(await f.text());if(j.app!=="cr-decks")throw new Error("not a CR Decks backup");
+    if(PENDING!==j.at){PENDING=j.at;msg.textContent=`Backup from ${fmtDate(j.at)}: ${j.user.length} added decks, ${Object.keys(j.favs||{}).length} favorites, ${(j.battles||[]).length} battles. Choose the file again to replace what's on this phone.`;return}
+    PENDING=null;USER=j.user||[];FAVS=j.favs||{};HIDDEN=new Set(j.hidden||[]);CUSTOM=j.cards||{};
+    lsSet("crd-user",USER);lsSet("crd-favs",FAVS);lsSet("crd-hidden",[...HIDDEN]);lsSet("crd-cards",CUSTOM);for(const [id,v] of Object.entries(CUSTOM))CARDS[id]=v;
+    await loadBattles();if(BIDB){await idbDo(BIDB,"battles","readwrite",s=>s.clear());for(const b of j.battles||[])await idbDo(BIDB,"battles","readwrite",s=>s.put(b))}
+    PIDB=PIDB||await idbOpen("crd-pics","pics");await idbDo(PIDB,"pics","readwrite",s=>s.clear());
+    for(const [k,u] of Object.entries(j.pics||{})){const b=u?await (await fetch(u)).blob():null;await idbDo(PIDB,"pics","readwrite",s=>s.put(b,k))}
+    await loadPics();await loadBattles();rebuild();toast("Backup restored.");renderMore()}
+  catch(err){msg.textContent="That file couldn't be restored: "+(err.message||err)}}
+
+/* ---------- picture dialog ---------- */
+let PCUR=null;
+function openSheet(html){$("sheetBody").innerHTML=html;$("sheet").hidden=false}
+function closeSheet(){$("sheet").hidden=true;$("sheetBody").innerHTML=""}
+$("sheet").onclick=e=>{if(e.target.id==="sheet")closeSheet()};
+function picDialog(cid,form){PCUR={cid,form};const k=cid+"_"+form,has=(k in UPICS&&UPICS[k])||(!(k in UPICS)&&BPICS.has(k));
+  openSheet(`<h2>${form==="base"?"":form==="evo"?"Evo ":"Hero "}${esc(cname(cid))}</h2><p class="hint">This picture shows on every ${form==="base"?"normal":form} ${esc(cname(cid))} in every deck.${form!=="base"?" Without one, the normal card picture is used.":""}</p>
+  <button class="btn gold" type="button" id="pchoose">Choose a picture</button>${has?`<button class="btn danger" type="button" id="prm">Remove this picture</button>`:""}<button class="btn" type="button" id="px">Cancel</button>`);
+  $("pchoose").onclick=()=>$("picfile").click();if($("prm"))$("prm").onclick=()=>setPic(null);$("px").onclick=closeSheet}
+$("picfile").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(f&&PCUR)await setPic(await shrink(f))};
+async function shrink(f){try{const bmp=await createImageBitmap(f);const w=Math.min(240,bmp.width),h=Math.round(bmp.height*w/bmp.width);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(bmp,0,0,w,h);return await new Promise(r=>c.toBlob(b=>r(b||f),"image/webp",.8))}catch(_){return f}}
+async function setPic(blob){try{PIDB=PIDB||await idbOpen("crd-pics","pics");await idbDo(PIDB,"pics","readwrite",s=>s.put(blob,PCUR.cid+"_"+PCUR.form));await loadPics();closeSheet();render()}catch(_){toast("Couldn't save the picture on this phone.")}}
+
+/* ---------- filters sheet ---------- */
+function filterSheet(){const specs=uniq(D.flatMap(d=>d.variants.flatMap(v=>v.specials))).sort(),towers=uniq(D.flatMap(d=>d.variants.map(v=>v.tower))).sort();
+  const sel=(id,first,opts,cur)=>`<select id="${id}"><option value="">${first}</option>${opts.map(o=>Array.isArray(o)?o:[o,o]).map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("")}</select>`;
+  openSheet(`<h2>Filters</h2>
+  <div class="fld"><span class="lab">Sort</span><select id="fsort">${SORTS.map(([v,l])=>`<option value="${v}"${v===S.sort?" selected":""}>${l}</option>`).join("")}</select></div>
+  <div class="fld"><span class="lab">Archetype</span>${sel("farch","All archetypes",ARCHS,S.arch)}</div>
+  <div class="fld"><span class="lab">Evolution or hero</span>${sel("fspec","Any evo / hero",specs,S.spec)}</div>
+  <div class="fld"><span class="lab">Meta period</span>${sel("fera","All meta periods",ERA_OPTS.slice(1),S.era)}</div>
+  <div class="fld"><span class="lab">Tower troop</span>${sel("ftower","Any tower troop",towers,S.tower)}</div>
+  <div class="fld"><span class="lab">Your picks</span><div class="wrapchips">${PICKS.map(([l,p],k)=>`<button class="chip" type="button" data-pk="${k}" aria-pressed="${Object.entries(p).every(([a,b])=>S[a]===b)}">${l}</button>`).join("")}</div></div>
+  <div class="sbtns"><button class="btn" type="button" id="fclear">Clear filters</button><button class="btn gold grow" type="button" id="fdone">Show decks</button></div>`);
+  const apply=()=>{S.sort=$("fsort").value;S.arch=$("farch").value;S.spec=$("fspec").value;S.era=$("fera").value;S.tower=$("ftower").value;savePrefs()};
+  $("fdone").onclick=()=>{apply();S.only=null;closeSheet();syncTop();render();scrollTo(0,0)};
+  $("fclear").onclick=()=>{S={...S,arch:"",spec:"",era:"",tower:"",sec:"all",only:null};closeSheet();syncTop();render()};
+  $("sheetBody").querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>{const p=PICKS[+b.dataset.pk][1];const on=b.getAttribute("aria-pressed")==="true";["farch","fspec","ftower"].forEach(id=>$(id).value="");if(!on){if(p.arch)$("farch").value=p.arch;if(p.spec)$("fspec").value=p.spec;if(p.tower)$("ftower").value=p.tower}apply();S.only=null;closeSheet();syncTop();render();scrollTo(0,0)})}
+
+/* ---------- view switching ---------- */
+const TITLES={lib:"My decks",fav:"Favorites",bat:"Battles",add:"Add a deck",more:"More"};
+function syncTop(){const lib=VIEW==="lib";$("ttl").textContent=TITLES[VIEW];$("srow").hidden=!(lib||VIEW==="fav"||VIEW==="bat");$("fbtn").hidden=!lib;$("secchips").hidden=!lib;
+  $("q").placeholder=VIEW==="bat"?"Search a card":"Search a card or deck";
+  const n=!!S.arch+!!S.spec+!!S.era+!!S.tower;$("fbadge").hidden=!n;$("fbadge").textContent=n;
+  $("secchips").innerHTML=SECS.map(([k,l])=>`<button class="chip" type="button" data-sec="${k}" aria-pressed="${S.sec===k}">${l}</button>`).join("");
+  document.querySelectorAll(".nav [data-v]").forEach(b=>{if(b.dataset.v===VIEW)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")})}
+function setView(v){VIEW=v;syncTop();render();scrollTo(0,0)}
+function render(){if(VIEW==="lib")renderLib();else if(VIEW==="fav")renderFav();else if(VIEW==="bat")renderBat();else if(VIEW==="add")renderAdd();else renderMore()}
+document.querySelector(".nav").onclick=e=>{const b=e.target.closest("[data-v]");if(!b)return;if(b.dataset.v==="add"&&VIEW!=="add")ED=null;if(b.dataset.v==="lib")S.only=null;setView(b.dataset.v)};
+$("secchips").onclick=e=>{const b=e.target.closest("[data-sec]");if(!b)return;S.sec=b.dataset.sec;S.only=null;syncTop();render();scrollTo(0,0)};
+$("fbtn").onclick=filterSheet;
+let qT=null;$("q").oninput=e=>{clearTimeout(qT);qT=setTimeout(()=>{S.q=e.target.value.trim();S.only=null;render()},180)};
+
+/* ---------- taps inside the list ---------- */
+const BFAV2=BFAV;
+$("out").addEventListener("click",e=>{const t=e.target;
+  const cd=t.closest(".cd");if(cd&&EDIT&&cd.dataset.card&&VIEW!=="add"){e.preventDefault();picDialog(+cd.dataset.card,cd.dataset.form);return}
+  const fv=t.closest("[data-fav]");if(fv){const k=fv.dataset.fav;if(FAVS[k])delete FAVS[k];else FAVS[k]=BYKEY[k]?{k,at:Date.now(),lib:true}:{k,at:Date.now(),...(BFAV2[k]||{})};lsSet("crd-favs",FAVS);
+    document.querySelectorAll(`[data-fav="${k}"]`).forEach(b=>{const on=!!FAVS[k];b.setAttribute("aria-pressed",on);b.textContent=on?"♥":"♡"});if(VIEW==="fav"&&!FAVS[k]){const a=fv.closest(".dk");if(a)a.remove()}return}
+  if(t.closest("[data-showall]")){S.only=null;render();return}
+  const sd=t.closest("[data-side]");if(sd){BV.side=sd.dataset.side;BV.sort="";savePrefs();render();return}
+  const art=t.closest(".dk");const d=art&&art.dataset.i!=null?D[+art.dataset.i]:null;
+  const tb=t.closest("[data-tab]");if(tb&&d){d.active=+tb.dataset.tab;const open=!art.querySelector(".det").hidden;art.outerHTML=deckHTML(d);if(open){const a2=document.querySelector(`.dk[data-i="${d.i}"]`);const det=a2.querySelector(".det");det.innerHTML=detHTML(d);det.hidden=false}return}
+  if(t.closest("[data-more]")&&d){const det=art.querySelector(".det");if(det.hidden){det.innerHTML=detHTML(d);det.hidden=false;t.closest("[data-more]").textContent="Hide details"}else{det.hidden=true;t.closest("[data-more]").textContent="Details"}return}
+  const go=t.closest("[data-go]");if(go){S={...S,sec:"all",q:"",arch:"",spec:"",era:"",tower:"",only:+go.dataset.go};$("q").value="";if(VIEW!=="lib")setView("lib");else{syncTop();render();scrollTo(0,0)}return}
+  const ar=t.closest("[data-arch]");if(ar){S={...S,arch:ar.dataset.arch,only:null,sec:"all"};syncTop();render();scrollTo(0,0);return}
+  if(t.closest("[data-hide]")&&d){if(HIDDEN.has(d.key))HIDDEN.delete(d.key);else HIDDEN.add(d.key);lsSet("crd-hidden",[...HIDDEN]);if(HIDDEN.has(d.key)){art.remove();toast("Deck hidden. Unhide it from More.")}return}
+  if(t.closest("[data-copy]")&&d){const v=d.variants[bestVar(d)];copyText(v.link);return}
+  if(t.closest("[data-del]")&&d){const b=t.closest("[data-del]");if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="Tap again to delete";return}USER=USER.filter(u=>u.key!==d.key);saveUser();render();toast("Deleted.");return}
+  if(t.closest("[data-edit]")&&d&&d.userAdd){const u=d.userAdd,v=u.variants[0];ED={order:v.order.map(Number),roles:{...v.roles},tt:v.tt,title:u.title,arch:(u.arch||[]).join(", "),notes:u.notes||"",editing:u.key};setView("add");return}
+  const sv=t.closest("[data-save-names]");if(sv){const j=JSON.parse(sv.dataset.saveNames);const order=j.names.map(n=>NAMEID[n]&&NAMEID[n][0]).filter(Boolean);const roles={};j.names.forEach(n=>{if(j.roles[n]&&NAMEID[n])roles[NAMEID[n][0]]=j.roles[n]});ED=null;startAdd({order,roles,tt:TTID[j.tower]||""},{title:bLabel(j.names,j.roles)});return}
+});
+function copyText(s){if(window.AndroidClip){AndroidClip.copy(s);toast("Link copied.");return}navigator.clipboard.writeText(s).then(()=>toast("Link copied."),()=>toast("Copying is blocked here."))}
+
+/* ---------- shared from Clash Royale (Android share sheet) ---------- */
+window.onSharedText=function(){let t="";try{t=window.AndroidShare?AndroidShare.take():""}catch(_){}if(!t)return;const p=parseDeckText(t);
+  if(p&&p.order.length){startAdd(p);toast("Deck received. Check the Evo and Hero slots, then save.")}else toast("That share didn't contain a deck link.")};
+
+/* ---------- boot ---------- */
+(async()=>{rebuild();syncTop();render();await Promise.all([loadPics(),loadBattles()]);render();window.onSharedText()})();
+</script>
+</body>
+</html>

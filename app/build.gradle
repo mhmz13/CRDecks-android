@@ -1,0 +1,45 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.crdecks.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.crdecks.app'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        // One fixed key, so every new build installs over the previous one and keeps saved progress.
+        shared {
+            storeFile file('crdecks.keystore')
+            storePassword 'crdecks'
+            keyAlias 'crdecks'
+            keyPassword 'crdecks'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.shared
+        }
+        release {
+            signingConfig signingConfigs.shared
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.11.0'
+}
