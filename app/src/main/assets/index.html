@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101a33">
 <title>CR Decks</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 :root{
   --bg:#0e1730;--bg2:#16223f;--panel:#1a2849;--panel2:#22335c;--ink:#f1f4ff;--muted:#9eabcf;--line:rgba(255,255,255,.1);
@@ -31,6 +32,7 @@ h1{margin:0;font-size:1.25rem;font-weight:900;letter-spacing:.01em;color:var(--g
 .chip{flex:none;border:1px solid var(--line);background:var(--bg2);border-radius:999px;padding:6px 12px;font-weight:800;font-size:.82rem;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--gold);color:#352500;border-color:var(--gold)}
 main{padding:10px 10px calc(var(--nav) + var(--safe-b) + 20px)}
+#labhost{display:block;padding:8px 6px calc(var(--nav) + var(--safe-b) + 16px)}
 .sec{margin:16px 4px 6px;font-weight:900;font-size:1.02rem;color:var(--gold)}
 .secn{margin:0 4px 8px;color:var(--muted);font-size:.8rem}
 .dk{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:10px;content-visibility:auto;contain-intrinsic-size:auto 330px}
@@ -80,7 +82,7 @@ body.editpics .cd{outline:2px dashed var(--gold);outline-offset:-2px}
 .det .row{display:flex;flex-wrap:wrap;gap:6px}
 .empty{color:var(--muted);text-align:center;padding:40px 16px}
 .sentinel{height:1px}
-.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg2);border-top:1px solid var(--line);padding-bottom:var(--safe-b);height:calc(var(--nav) + var(--safe-b))}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);background:var(--bg2);border-top:1px solid var(--line);padding-bottom:var(--safe-b);height:calc(var(--nav) + var(--safe-b))}
 .nav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.68rem;font-weight:800;color:var(--muted)}
 .nav button span{font-size:1.25rem;line-height:1}
 .nav button[aria-current="page"]{color:var(--gold)}
@@ -130,10 +132,12 @@ label.btn{position:relative;overflow:hidden;display:inline-flex;align-items:cent
   <div class="chips" id="secchips" role="group" aria-label="Section"></div>
 </header>
 <main id="out"></main>
+<div id="labhost" hidden></div>
 <nav class="nav" aria-label="Sections">
   <button type="button" data-v="lib" aria-current="page"><span>🃏</span>Decks</button>
   <button type="button" data-v="fav"><span>♥</span>Favorites</button>
   <button type="button" data-v="bat"><span>⚔</span>Battles</button>
+  <button type="button" data-v="lab"><span>💧</span>Lab</button>
   <button type="button" data-v="add" class="add"><span>+</span>Add</button>
   <button type="button" data-v="more"><span>⋯</span>More</button>
 </nav>
@@ -141,6 +145,660 @@ label.btn{position:relative;overflow:hidden;display:inline-flex;align-items:cent
 <input type="file" id="picfile" accept="image/*" class="vh" aria-hidden="true" tabindex="-1">
 <div id="toast" class="toast" hidden role="status"></div>
 <script src="data.js"></script>
+<script>
+/* ---------- Elixir Lab (runs inside its own shadow root, so its styles never touch the rest of the app) ---------- */
+function ELAB_START(ROOT,HOST,RAW,PIC,ACTIVE,ON){
+/* ---------- card knowledge ---------- */
+const SPELLS=new Set(['Arrows','Barbarian Barrel','Clone','Earthquake','Fireball','Freeze','Giant Snowball','Goblin Barrel','Goblin Curse','Graveyard','Lightning','Mirror','Poison','Rage','Rocket','Royal Delivery','The Log','Tornado','Vines','Void','Zap']);
+const BLDG=new Set(['Barbarian Hut','Bomb Tower','Cannon','Elixir Collector','Furnace','Goblin Cage','Goblin Drill','Goblin Hut','Inferno Tower','Mortar','Tesla','Tombstone','X-Bow']);
+const CHAMP=new Set(RAW.champ);
+// Champion ability elixir costs (gamingonphone champion guide; RoyaleAPI for Goblinstein; esports.net for Boss Bandit)
+const CHAMP_AB={'Archer Queen':1,'Golden Knight':1,'Little Prince':3,'Mighty Miner':1,'Monk':1,'Skeleton King':2,'Goblinstein':2,'Boss Bandit':1};
+// Hero ability elixir costs, one use per deployment since the Aug 2026 update (TrophyCoach hero encyclopedia)
+const HERO_AB={'Knight':2,'Giant':2,'Mini P.E.K.K.A':1,'Musketeer':3,'Wizard':2,'Ice Golem':2,'Goblins':1,'Mega Minion':2,'Barbarian Barrel':1,'Magic Archer':2,'Balloon':2,'Dark Prince':3,'Bowler':2,'Tombstone':5,'Valkyrie':3,'Berserker':3,'Ice Wizard':2,'Electro Wizard':2};
+// Evolution cycles (gamingonphone evolution list). Others default to 2 and are marked unverified; editable in Settings.
+const EVO_KNOWN={'Barbarians':1,'Firecracker':2,'Skeletons':2,'Royal Giant':1,'Mortar':2,'Knight':2,'Royal Recruits':1,'Bats':2,'Archers':2,'Ice Spirit':3,'Valkyrie':2,'Bomber':1,'Wall Breakers':2,'Tesla':2,'Zap':2,'Battle Ram':2,'Wizard':1,'Goblin Barrel':2};
+const PUMP={rate:8.5,max:8,life:70}; // clasher.us Elixir Collector stats
+const ABBR={'Hog Rider':'HOG','The Log':'LOG','Three Musketeers':'3M','Electro Giant':'EG','Electro Wizard':'EW','Electro Dragon':'ED','Electro Spirit':'ES','Elixir Collector':'PMP','Elixir Golem':'EGL','Elite Barbarians':'EB','Mini P.E.K.K.A':'MP','P.E.K.K.A':'PK','Mega Knight':'MK','Mega Minion':'MM','Minion Horde':'HRD','Skeleton Army':'SKA','Skeleton Barrel':'SKB','Skeleton Dragons':'SKD','Skeleton King':'SK','Skeletons':'SKE','Goblin Barrel':'GBR','Goblin Gang':'GG','Goblin Giant':'GGI','Goblin Hut':'GHT','Goblin Cage':'CAG','Goblin Drill':'DRL','Goblin Curse':'CRS','Goblin Machine':'GMC','Goblin Demolisher':'DEM','Goblinstein':'GST','Goblins':'GOB','Giant Skeleton':'GSK','Giant Snowball':'SNW','Giant':'GIA','Golden Knight':'GK','Golem':'GOL','Royal Giant':'RG','Royal Hogs':'RH','Royal Recruits':'RR','Royal Ghost':'GHO','Royal Delivery':'DLV','Ice Spirit':'ICS','Ice Golem':'IG','Ice Wizard':'IW','Fire Spirit':'FS','Heal Spirit':'HS','Inferno Tower':'INF','Inferno Dragon':'ID','Lava Hound':'LH','Little Prince':'LP','Lumberjack':'LJ','Magic Archer':'MA','Mighty Miner':'MMi','Mother Witch':'MW','Night Witch':'NW','Archer Queen':'AQ','Baby Dragon':'BD','Barbarian Barrel':'BBL','Barbarian Hut':'BHT','Battle Ram':'RAM','Battle Healer':'BH','Bomb Tower':'BT','Boss Bandit':'BB','Cannon Cart':'CC','Dark Prince':'DP','Dart Goblin':'DG','Flying Machine':'FM','Wall Breakers':'WB','Spear Goblins':'SPG','Spirit Empress':'SE','Suspicious Bush':'BSH','Rune Giant':'RNG','Minion Giant':'MGI','Ram Rider':'RR2','X-Bow':'XB','Earthquake':'EQ','Lightning':'LTN','Fireball':'FB','Tornado':'TOR','Poison':'PSN','Rocket':'RKT','Freeze':'FRZ','Graveyard':'GY','Mirror':'MIR','Arrows':'ARR','Zap':'ZAP','Rage':'RGE','Clone':'CLN','Vines':'VIN','Void':'VOD','Tombstone':'TMB','Executioner':'EXE','Firecracker':'FC','Fisherman':'FSH','Musketeer':'MSK','Valkyrie':'VAL','Berserker':'BRS','Princess':'PRN','Bandit':'BDT','Hunter':'HNT','Phoenix':'PHX','Zappies':'ZPS','Rascals':'RAS','Guards':'GRD','Witch':'WCH','Wizard':'WIZ','Bowler':'BWL','Sparky':'SPK','Tesla':'TES','Mortar':'MOR','Furnace':'FUR','Cannon':'CAN','Knight':'KNT','Archers':'ARC','Bats':'BAT','Minions':'MIN','Bomber':'BMB','Barbarians':'BAR','Balloon':'BLN','Miner':'MNR','Monk':'MNK','Prince':'PRC','Ronin':'RON','Lumberjack ':'LJ'};
+const WINCON=['Hog Rider','Golem','Electro Giant','Royal Giant','Giant','Goblin Giant','Lava Hound','Balloon','X-Bow','Mortar','Graveyard','Goblin Barrel','Royal Hogs','Three Musketeers','Ram Rider','Battle Ram','Miner','Goblin Drill','Wall Breakers','Mega Knight','P.E.K.K.A','Elixir Golem','Giant Skeleton','Sparky','Skeleton Barrel','Rune Giant','Minion Giant','Goblinstein','Royal Recruits','Elite Barbarians','Skeleton Dragons','Prince'];
+const cost=n=>RAW.cards[n]?RAW.cards[n][1]:3;
+const ctype=n=>CHAMP.has(n)?'champ':SPELLS.has(n)?'spell':BLDG.has(n)?'bldg':'troop';
+const abbr=n=>ABBR[n]||n.replace(/[^A-Za-z ]/g,'').split(' ').map(w=>w[0]).join('').slice(0,3).toUpperCase()||n.slice(0,3).toUpperCase();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const fmtT=s=>{s=Math.max(0,s);const m=Math.floor(s/60),x=Math.floor(s%60);return m+':'+String(x).padStart(2,'0')};
+
+/* ---------- storage (per-device convenience) ---------- */
+const store={get(k,d){try{const v=localStorage.getItem('elab-'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('elab-'+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- settings ---------- */
+const DEFAULTS={
+  oppPool:['meta','faced'], oppDeck:-1, myDeck:-1, youPlay:true, autoMe:false,
+  speed:1, startElixir:5, startAt:0, overtime:'off', style:'mixed', react:true,
+  qEvery:'plays', qPlays:3, qSecs:15, timer:10, tol:0,
+  qTypes:{elixir:true,diff:true,hand:true,cycle:true,evo:true},
+  showLog:true, memory:false, revealDeck:true, showOppName:false, showOppElixir:false, showClock:true, showPhase:true, showPump:true,
+  evoStartCharged:false, pumpLife:'random', abilities:true,
+  quizN:15, quizTimer:15, quizTypes:{cost:true,ability:true,trade:true,counter:true,placement:true,deck:true,math:true,evo:true},
+  evoOverride:{}
+};
+let S=Object.assign({},DEFAULTS,store.get('settings',{}));
+S.qTypes=Object.assign({},DEFAULTS.qTypes,S.qTypes||{});S.quizTypes=Object.assign({},DEFAULTS.quizTypes,S.quizTypes||{});S.evoOverride=S.evoOverride||{};
+const saveS=()=>{S.myDeckK=S.myDeck>=0&&DECKS[S.myDeck]?DECKS[S.myDeck].k:null;S.oppDeckK=S.oppDeck>=0&&DECKS[S.oppDeck]?DECKS[S.oppDeck].k:null;store.set('settings',S)};
+const evoCycles=n=>S.evoOverride[n]!=null?S.evoOverride[n]:(EVO_KNOWN[n]??2);
+const PRESETS={
+  full:{label:'Full match',sub:'You play, they play. Questions every few plays.',set:{youPlay:true,autoMe:false,speed:1,qEvery:'plays',qPlays:3,timer:10}},
+  rapid:{label:'Rapid count',sub:'A full match that asks after every card they play: who is up, and what they have. 10 seconds per answer.',set:{youPlay:true,autoMe:false,speed:1,qEvery:'plays',qPlays:1,timer:10},types:{elixir:true,diff:true,hand:false,cycle:false,evo:false}},
+  cycle:{label:'Cycle tracker',sub:'Track their 8-card rotation: what is in hand, when a card comes back.',set:{youPlay:false,speed:1,qEvery:'plays',qPlays:2,timer:12},types:{elixir:false,diff:false,hand:true,cycle:true,evo:true}},
+  double:{label:'Double elixir sprint',sub:'Start at 2:00 in 2× elixir. One minute of fast math.',set:{youPlay:true,speed:1,startAt:120,qEvery:'plays',qPlays:2,timer:6},types:{elixir:true,diff:true,hand:false,cycle:false,evo:false}},
+};
+/* ---------- decks ---------- */
+const DECKS=RAW.decks.map((d,i)=>Object.assign({i},d));
+if(!DECKS.length)DECKS.push({i:0,t:'No decks',g:['mine','meta'],a:[],c:['Knight','Archers','Goblins','Giant','Fireball','Zap','Musketeer','Valkyrie'],r:{},tw:'Tower Princess',m:null,tier:null,k:'none'});
+const GROUPS={meta:'Meta: top players and popular',faced:'Faced at your level',mine:'Your decks',liked:'Decks you liked'};
+const myDefault=()=>{const m=DECKS.find(d=>d.tier==='main'&&d.c.includes('Monk'))||DECKS.find(d=>d.tier==='main');return m?m.i:(DECKS.find(d=>d.g.includes('mine'))||DECKS[0]).i};
+{const fi=k=>k?DECKS.findIndex(d=>d.k===k):-1;S.myDeck=fi(S.myDeckK);S.oppDeck=fi(S.oppDeckK);}
+function poolDecks(){const p=S.oppPool.length?S.oppPool:['meta'];return DECKS.filter(d=>d.g.some(g=>p.includes(g)))}
+
+/* ---------- card tile ---------- */
+function cardHTML(n,o={}){
+  const t=ctype(n);const role=o.role;let cls=['card',t,o.size||'',role==='evo'?'evo':'',role==='hero'?'hero':'',o.sel?'sel':''].join(' ');
+  const c=o.cost!=null?o.cost:cost(n);
+  let pips='';if(role==='evo'&&o.pips!=null){const N=evoCycles(n);pips='<span class="pips">'+Array.from({length:N},(_,k)=>`<i class="${k<o.pips?'on':''}"></i>`).join('')+'</span>'}
+  const tag=role==='evo'?(o.evolved?'EVOLVED':'EVO'):role==='hero'?'HERO':t==='champ'?'CHAMP':'';
+  const pic=PIC(n,role);if(pic)cls+=' pic';
+  const inner=`${pic?`<img src="${esc(pic)}" alt="" loading="lazy" decoding="async">`:''}<span class="cost">${c}</span>${pips}<span class="ab">${esc(abbr(n))}</span><span class="nm">${esc(n)}</span>${tag?`<span class="tag">${tag}</span>`:''}`;
+  if(o.button)return `<button class="${cls}" data-card="${esc(n)}" ${o.disabled?'disabled':''} title="${esc(n)} · ${c} elixir" aria-label="${esc(n)}, ${c} elixir">${inner}</button>`;
+  return `<div class="${cls}" title="${esc(n)} · ${c} elixir">${inner}</div>`;
+}
+const dropSVG=`<svg class="drop" viewBox="0 0 30 30" aria-hidden="true"><defs><radialGradient id="dg" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#ffb3ff"/><stop offset=".5" stop-color="#d23fd6"/><stop offset="1" stop-color="#6d1fa3"/></radialGradient></defs><path d="M15 2C15 2 26 14 26 19.5A11 10 0 0 1 4 19.5C4 14 15 2 15 2Z" fill="url(#dg)" stroke="#f7c8f8" stroke-width="1.2"/><ellipse cx="11" cy="16" rx="2.6" ry="4" fill="#fff" opacity=".55"/></svg>`;
+
+/* ---------- simulation ---------- */
+function rateAt(t){ if(t<120)return 1/2.8; if(t<180)return 2/2.8; if(t<240)return 2/2.8; return 3/2.8 }
+function phaseAt(t){return t<120?1:t<240?2:3}
+function endTime(){return S.overtime==='off'?180:S.overtime==='on'?300:(Math.random()<.5?180:300)}
+
+function makePlayer(deck,name){
+  const order=shuffle(deck.c);
+  const p={name,deck,roles:deck.r||{},elixir:S.startElixir,hand:order.slice(0,4),queue:order.slice(4),leaked:0,plays:[],pumps:[],evo:{},out:{},seen:new Set(),abilityTimers:[],lastCard:null};
+  for(const n of deck.c)if(p.roles[n]==='evo')p.evo[n]=S.evoStartCharged?evoCycles(n):0;
+  return p;
+}
+function canAfford(p,n){return p.elixir+1e-9>=playCost(p,n)}
+function playCost(p,n){if(n==='Mirror')return p.lastCard&&p.lastCard!=='Mirror'?Math.min(10,cost(p.lastCard)+1):99;return cost(n)}
+
+const G={}; // match state
+function newMatch(){
+  const pool=poolDecks();
+  const od=S.oppDeck>=0&&DECKS[S.oppDeck]?DECKS[S.oppDeck]:pick(pool);
+  const md=DECKS[S.myDeck>=0?S.myDeck:myDefault()];
+  Object.assign(G,{t:S.startAt,end:endTime(),running:false,over:false,events:[],questions:[],samples:[],
+    me:makePlayer(md,'You'),op:makePlayer(od,'Opponent'),nextOp:S.startAt+rnd(1.5,4),nextMe:S.startAt+rnd(1,3),
+    style:S.style==='mixed'?pick(['patient','aggressive','cycle']):S.style,sinceQ:0,nextQAt:S.startAt+S.qSecs,lastFrame:0,qOpen:false,sel:null,stats:{}});
+  G.op.elixir=S.startElixir;G.me.elixir=S.startElixir;
+  if(S.revealDeck)for(const n of od.c)G.op.seen.add(n);
+}
+function tickPlayer(p,dt){
+  const r=rateAt(G.t)*dt;let e=p.elixir+r;
+  for(const pm of p.pumps){ if(!pm.alive)continue;
+    pm.timer+=dt; while(pm.timer>=PUMP.rate&&pm.made<PUMP.max&&pm.age<pm.life){pm.timer-=PUMP.rate;pm.made++;e+=1;logPump(p,pm)}
+    pm.age+=dt; if(pm.age>=pm.life||pm.made>=PUMP.max){pm.alive=false}
+  }
+  if(e>10){p.leaked+=e-10;e=10}
+  p.elixir=e;
+}
+function logPump(p,pm){G.events.push({t:G.t,who:p===G.op?'op':'me',pump:1,elixirAfter:Math.min(10,p.elixir+1)})}
+function doPlay(p,n,opts={}){
+  const c=playCost(p,n);if(p.elixir+1e-9<c)return false;
+  const before=p.elixir;p.elixir-=c;
+  const idx=p.hand.indexOf(n);if(idx<0)return false;
+  p.hand.splice(idx,1);
+  let evolved=false;
+  if(p.roles[n]==='evo'){const N=evoCycles(n);if(p.evo[n]>=N){evolved=true;p.evo[n]=0}else p.evo[n]++}
+  const role=p.roles[n]||(CHAMP.has(n)?'champ':null);
+  if(CHAMP.has(n)){p.out[n]=G.t+rnd(9,26)} else p.queue.push(n);
+  if(p.queue.length)p.hand.push(p.queue.shift());
+  p.lastCard=n;p.seen.add(n);
+  const ev={t:G.t,who:p===G.op?'op':'me',card:n,cost:c,before,after:p.elixir,evolved,role};
+  G.events.push(ev);p.plays.push(ev);
+  if(n==='Elixir Collector'){const life=S.pumpLife==='full'?PUMP.life:rnd(25,PUMP.life);p.pumps.push({t:G.t,timer:0,made:0,age:0,life,alive:true})}
+  if(S.abilities){
+    const ab=role==='hero'?HERO_AB[n]:CHAMP.has(n)?CHAMP_AB[n]:null;
+    if(ab&&p===G.op){p.abilityTimers.push({at:G.t+rnd(2,7),card:n,cost:ab,uses:CHAMP.has(n)?(Math.random()<.35?2:1):1,prob:.75})}
+  }
+  if(p===G.op){G.sinceQ++}
+  return ev;
+}
+function champsReturn(p){for(const n in p.out){if(G.t>=p.out[n]){delete p.out[n];p.queue.push(n);if(p.hand.length<4&&p.queue.length)p.hand.push(p.queue.shift())}}}
+function useAbilities(p){
+  for(const a of p.abilityTimers){ if(a.done||G.t<a.at)continue;
+    const alive=CHAMP.has(a.card)?(a.card in p.out):true; if(!alive){a.done=true;continue}
+    if(Math.random()>a.prob){a.done=true;continue}
+    if(p.elixir+1e-9>=a.cost){const before=p.elixir;p.elixir-=a.cost;const ev={t:G.t,who:p===G.op?'op':'me',card:a.card,cost:a.cost,before,after:p.elixir,ability:true};G.events.push(ev);p.plays.push(ev);a.uses--;
+      if(a.uses>0){a.at=G.t+rnd(10,16)}else a.done=true}
+    else a.at=G.t+1.5;
+  }
+}
+function aiChoose(p,style,reactive){
+  const aff=p.hand.filter(n=>canAfford(p,n)&&n!=='Mirror'||(n==='Mirror'&&canAfford(p,n)));
+  if(!aff.length)return null;
+  const w=aff.map(n=>{let s=1;const c=playCost(p,n);
+    if(WINCON.includes(n))s*=p.elixir>=8||reactive?1.6:.9;
+    if(style==='cycle'&&c<=2)s*=2.2;
+    if(n==='Elixir Collector')s*=p.elixir>=8?1.4:.4;
+    if(reactive&&SPELLS.has(n))s*=1.3;
+    if(p.roles[n]==='evo'&&p.evo[n]>=evoCycles(n))s*=1.5;
+    return s});
+  let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let k=0;k<aff.length;k++){r-=w[k];if(r<=0)return aff[k]}return aff[0];
+}
+function aiThreshold(style){return style==='patient'?rnd(6.5,10.6):style==='aggressive'?rnd(3,6):rnd(2,5)}
+function aiStep(p,isOpp){
+  const key=isOpp?'nextOp':'nextMe';
+  if(G.t<G[key])return;
+  const th=p._th??(p._th=aiThreshold(isOpp?G.style:'mixed'));
+  const lowest=Math.min(...p.hand.map(n=>playCost(p,n)));
+  if(p.elixir+1e-9>=Math.max(th,lowest)||(p.elixir>=10&&Math.random()<.5)){
+    const n=aiChoose(p,isOpp?G.style:'mixed',false);
+    if(n){doPlay(p,n);p._th=null;G[key]=G.t+rnd(1.2,isOpp&&G.style==='patient'?6:4);afterPlay(isOpp?'op':'me');return}
+  }
+  G[key]=G.t+rnd(.4,1.2);
+}
+function reactTo(){ if(!S.react)return; if(Math.random()<.6)G.nextOp=Math.min(G.nextOp,G.t+rnd(.8,2.4)), G.op._th=Math.min(G.op._th??10,rnd(2,5)) }
+function afterPlay(who){
+  render.feed();
+  if(who==='me')reactTo();
+  if(who==='op'&&S.qEvery==='plays'&&G.sinceQ>=S.qPlays){G.sinceQ=0;setTimeout(()=>ask(),1300)}
+}
+function loop(ts){
+  if(!G.running){G.lastFrame=0;return}
+  if(!G.lastFrame)G.lastFrame=ts;
+  let dt=Math.min(.1,(ts-G.lastFrame)/1000)*S.speed;G.lastFrame=ts;
+  if(!G.qOpen){
+    const steps=Math.ceil(dt/.05);const h=dt/steps;
+    for(let k=0;k<steps;k++){
+      G.t+=h;tickPlayer(G.op,h);tickPlayer(G.me,h);champsReturn(G.op);champsReturn(G.me);useAbilities(G.op);
+      if(Math.floor(G.t*2)!==Math.floor((G.t-h)*2))G.samples.push({t:G.t,op:G.op.elixir,me:G.me.elixir});
+      aiStep(G.op,true);
+      if(!S.youPlay||S.autoMe)aiStep(G.me,false);
+      if(S.qEvery==='time'&&G.t>=G.nextQAt){G.nextQAt=G.t+S.qSecs*rnd(.7,1.3);ask();break}
+      if(G.t>=G.end){finish();return}
+      if(G.qOpen)break;
+    }
+  }
+  render.hud();
+  requestAnimationFrame(loop);
+}
+function start(){const h=$('.howd');if(h)h.open=false;G.running=true;G.lastFrame=0;requestAnimationFrame(loop);render.controls()}
+function pause(){G.running=false;render.controls()}
+
+/* ---------- questions in match ---------- */
+function ledger(){
+  // running elixir lead from THEIR side, the way players count it: spend more = fall behind
+  let lead=0;const rows=[];
+  for(const e of G.events){
+    if(e.card){const d=e.who==='op'?-e.cost:e.cost;lead+=d;rows.push({e,lead})}
+    else if(e.pump){const d=e.who==='op'?1:-1;lead+=d;rows.push({e,lead})}
+  }
+  return {lead,rows};
+}
+function leadTxt(n){n=Math.round(n);return n===0?'even':n>0?`they're up ${n}`:`you're up ${-n}`}
+function explainElixir(p){
+  const op=G.op,me=G.me;
+  if(!S.youPlay){
+    const pl=op.plays;const spent=pl.reduce((a,e)=>a+e.cost,0);const lp=pl[pl.length-1];
+    return lp?`Their last play was <b>${esc(lp.card)}${lp.ability?' ability':''}</b> (${lp.cost}). Exactly ${op.elixir.toFixed(1)} now.`:`No plays yet, so they are still on their starting ${S.startElixir}.`;
+  }
+  const {rows}=ledger();
+  const recent=rows.slice(-5).map(r=>{const e=r.e;const who=e.who==='op'?'They':'You';
+    const what=e.pump?`${e.who==='op'?'Their':'Your'} pump +1`:`${who} played ${esc(e.card)}${e.ability?' ability':''} (${e.cost})`;
+    return `<li>${what} → <b>${leadTxt(r.lead)}</b></li>`}).join('');
+  // leaks shift the balance too
+  const leakNote=(op.leaked>0.5||me.leaked>0.5)?`<br>Leaks: ${me.leaked>0.5?`you wasted ${me.leaked.toFixed(1)} at 10 (that counts in their favour)`:''}${me.leaked>0.5&&op.leaked>0.5?', ':''}${op.leaked>0.5?`they wasted ${op.leaked.toFixed(1)}`:''}.`:'';
+  const realLead=op.elixir-me.elixir;
+  return `<ul style="margin:4px 0 6px;padding-left:18px">${recent}</ul>Your bar shows <b>${Math.floor(me.elixir)}</b>; ${leadTxt(realLead)}, so they have <b>${Math.floor(op.elixir+1e-9)}</b>.${leakNote}${op.elixir>=9.99?'<br>They are sitting at 10 and leaking.':''}`;
+}
+function buildQ(depth=0){
+  if(depth>6)return null;
+  const types=Object.keys(S.qTypes).filter(k=>S.qTypes[k]);
+  const op=G.op;const can=[];
+  if(types.includes('elixir'))can.push('elixir','elixir');
+  if(types.includes('diff')&&S.youPlay)can.push('diff');
+  const playedCount=op.plays.filter(e=>!e.ability).length;
+  if(types.includes('hand')&&playedCount>=4&&op.hand.every(n=>op.seen.has(n)))can.push('hand');
+  if(types.includes('cycle')&&playedCount>=1)can.push('cycle');
+  const evoCards=Object.keys(op.evo).filter(n=>op.seen.has(n));
+  if(types.includes('evo')&&evoCards.length)can.push('evo');
+  if(!can.length)return null;
+  const k=pick(can);
+  if(k==='elixir'){const v=Math.floor(op.elixir+1e-9);return {k,label:'Opponent elixir',prompt:'How much elixir does your opponent have right now?',kind:'pad',answer:v,why:()=>explainElixir(op),exact:op.elixir}}
+  if(k==='diff'){const v=Math.floor(G.me.elixir+1e-9)-Math.floor(op.elixir+1e-9);
+    return {k,label:'Elixir lead',prompt:'Who is up on elixir, and by how much?',kind:'diff',answer:v,why:()=>explainElixir(op)}}
+  if(k==='hand'){const real=new Set(op.hand);
+    const opts=[...new Set(op.deck.c)].filter(n=>op.seen.has(n));
+    return {k,label:'Card tracking',prompt:'Tap the 4 cards in their hand right now.',kind:'multi',opts,answer:[...real],why:()=>{const last4=op.plays.filter(e=>!e.ability).slice(-4).map(e=>e.card);return `Their last four plays were ${last4.map(c=>'<b>'+esc(c)+'</b>').join(', ')}. Those are at the back of the queue, so the other four are in hand${Object.keys(op.out).length?' (a champion on the field is out of the rotation)':''}.`}}}
+  if(k==='cycle'){const pl=op.plays.filter(e=>!e.ability);const recent=pl.slice(-4).map(e=>e.card);const target=pick(recent.filter(n=>!CHAMP.has(n)))||recent[recent.length-1];
+    if(CHAMP.has(target)||!op.queue.includes(target)&&!op.hand.includes(target))return buildQ(depth+1);
+    const inHand=op.hand.includes(target);const pos=op.queue.indexOf(target); // plays needed before it reaches hand = pos+1
+    const v=inHand?0:pos+1;
+    return {k,label:'Cycle',prompt:`How many more cards must they play before <b>${esc(target)}</b> is back in their hand? (0 = it already is)`,kind:'pad',answer:v,max:4,why:()=>`Each play pulls the next card from the queue into the hand. ${esc(target)} is ${inHand?'already in hand':`number ${pos+1} in the queue`}. Played since it: ${pl.slice(pl.map(e=>e.card).lastIndexOf(target)+1).map(e=>esc(e.card)).join(', ')||'nothing yet'}.`}}
+  if(k==='evo'){const n=pick(evoCards);const N=evoCycles(n);const c=op.evo[n];const left=Math.max(0,N-c);
+    return {k,label:'Evolution watch',prompt:`How many more times must they play <b>${esc(n)}</b> before it comes out evolved? (0 = the next one is evolved)`,kind:'pad',answer:left,max:4,why:()=>`Evo ${esc(n)} needs ${N} cycle${N>1?'s':''} (${S.evoOverride[n]!=null?'your setting':EVO_KNOWN[n]!=null?'listed value':'default, unverified'}). Plays counted since its last evolution: ${c}.`}}
+}
+let qTimer=null;
+function ask(){
+  if(G.qOpen||G.over)return;
+  const q=buildQ();if(!q)return;
+  G.qOpen=true;q.t=G.t;q.started=performance.now();
+  render.question(q);
+}
+function answer(q,given){
+  clearInterval(qTimer);
+  let ok,err=0;
+  if(q.kind==='pad'||q.kind==='diff'){ok=given!=null&&Math.abs(given-q.answer)<=S.tol;err=given==null?null:Math.abs(given-q.answer)}
+  else if(q.kind==='multi'){const a=new Set(q.answer);ok=given&&given.length===4&&given.every(n=>a.has(n));}
+  q.given=given;q.ok=ok;q.err=err;q.ms=performance.now()-q.started;
+  G.questions.push(q);
+  render.feedback(q);
+}
+function closeQ(){G.qOpen=false;ROOT.getElementById('qwrap')?.remove();G.lastFrame=0}
+
+function finish(){
+  G.running=false;G.over=true;
+  const qs=G.questions;const by={};for(const q of qs){(by[q.k]=by[q.k]||{n:0,ok:0}).n++;if(q.ok)by[q.k].ok++}
+  const el=qs.filter(q=>q.k==='elixir'&&q.err!=null);
+  const rec={at:Date.now(),mode:G.mode,opp:G.op.deck.t,n:qs.length,ok:qs.filter(q=>q.ok).length,mae:el.length?el.reduce((a,q)=>a+q.err,0)/el.length:null,by,oppLeak:G.op.leaked,myLeak:G.me.leaked};
+  const H=store.get('history',[]);H.push(rec);store.set('history',H.slice(-200));
+  render.summary(rec);
+}
+
+/* ---------- knowledge quiz ---------- */
+const KB={
+counter:[
+ ['Goblin Barrel','The Log','The Log rolls over all three Goblins on the tower for 2 elixir.'],
+ ['Minion Horde','Arrows','Arrows clear all six Minions; a 3-for-5 trade.'],
+ ['Skeleton Army','Zap','One Zap kills the whole Skeleton Army.'],
+ ['Hog Rider','Cannon','A Cannon pulls the Hog to the middle; the Hog 2.6 default answer.'],
+ ['Sparky','Zap','Zap resets Sparky\'s charge, so it has to wind up again.'],
+ ['Inferno Tower','Zap','Zap resets the Inferno beam back to its low damage stage.'],
+ ['Three Musketeers','Lightning','Lightning hits all three Musketeers if they stand together.'],
+ ['Elixir Collector','Earthquake','Earthquake does bonus damage to buildings and can kill a pump from a distance.'],
+ ['Golem','Inferno Tower','The Inferno beam ramps up and melts high-HP tanks.'],
+ ['Lava Hound','Inferno Dragon','Inferno Dragon ramps up on the Hound; Hound pups need separate splash.'],
+ ['Graveyard','Poison','Poison on the tower kills skeletons as they spawn.'],
+ ['Bats','Zap','Zap kills a full set of Bats for the same elixir.'],
+ ['Royal Giant','Inferno Tower','Inferno Tower outdamages the Royal Giant before it does much.'],
+ ['Balloon','Musketeer','Air-targeting Musketeer behind a building pull shoots the Balloon down.'],
+ ['X-Bow','Ice Golem','In Hog 2.6, Ice Golem is held as the tank that distracts X-Bow.'],
+ ['Bandit','Skeletons','The Hog 2.6 guide notes Skeletons fully counter Bandit.'],
+ ['Electro Wizard','Skeletons','The Hog 2.6 guide notes Skeletons fully counter Electro Wizard.'],
+ ['Hunter','Ice Spirit','The Hog 2.6 guide notes Ice Spirit fully counters Hunter.'],
+],
+facts:[
+ ['Which spell cannot hit air troops?',['The Log','Arrows','Zap','Fireball'],'The Log','The Log only hits ground units.'],
+ ['When does double elixir start in a ranked match?',['With 1:00 left in regulation','With 2:00 left','At overtime','With 30 s left'],'With 1:00 left in regulation','Minutes 1 and 2 run at 1×, minute 3 at 2× (Supercell support: Elixir).'],
+ ['What is the elixir rate in the last minute of overtime?',['3×','2×','1×','4×'],'3×','Overtime runs at 2× in its first minute and 3× in its last (Supercell support: Elixir).'],
+ ['How much does Mirror cost?',['1 more than the mirrored card','Always 1','Same as the mirrored card','Half the mirrored card'],'1 more than the mirrored card','Mirror replays your last card at +1 elixir.'],
+ ['A champion is on the field. When does its card come back into your rotation?',['When the champion dies','After 4 plays','Right away','Never'],'When the champion dies','A champion card stays out of the cycle while the champion is alive.'],
+ ['What is a "4-card cycle"?',['The cost of your 4 cheapest cards','Your 4 most expensive cards','Average elixir × 4','The cards in your starting hand'],'The cost of your 4 cheapest cards','Cycling your 4 cheapest cards gets your win condition back fastest.'],
+ ['Elixir Collector makes 1 elixir every…',['8.5 s','5 s','12 s','2.8 s'],'8.5 s','Up to 8 elixir over a 70 s lifetime (clasher.us card stats).'],
+ ['How long must an Elixir Collector survive to pay back its 6 elixir?',['51 s','30 s','70 s','17 s'],'51 s','6 elixir × 8.5 s = 51 s, which is why an early Earthquake or Lightning on it hurts.'],
+ ['How many hero abilities can one hero deployment use?',['One','Two','Unlimited, with cooldown','None'],'One','Since the Aug 2026 update each hero ability is single-use per deployment (TrophyCoach).'],
+ ['Which spell also hits the opponent\'s crown towers and freezes them?',['Freeze','Tornado','Rage','Zap'],'Freeze','Freeze stops troops and buildings, towers included, for its duration.'],
+ ['You are at 10 elixir and not playing. What is happening?',['You are leaking elixir','You keep banking extra','Elixir regen speeds up','Nothing'],'You are leaking elixir','Elixir caps at 10; everything generated past that is lost.'],
+],
+placement:[
+ ['Default Cannon placement against almost every win condition (Hog 2.6)','4-2'],
+ ['Cannon for maximum pull on big tanks that can\'t bypass it (Golem from the back, unpushed Giant)','4-3'],
+ ['Cannon out of Fireball range vs Giant / Goblin Giant; also vs 2.9 X-Bow and pulls both lanes','3-3'],
+ ['Cannon against Lightning or Earthquake decks with bridge tanks, and Royal Hogs EQ','0-3'],
+ ['Cannon to pull Balloon (LavaLoon, Miner Balloon)','0-2'],
+ ['Cannon against Graveyard, or a late Cannon vs Hog / Ram Rider','5-0'],
+ ['Cannon against the Balloon + Bats/Minions trick','0-1'],
+ ['Cannon vs bypass-position Balloon (plus the double-Cannon King pull)','4-1'],
+]};
+function quizQ(depth=0){
+  if(depth>8)return {k:'math',label:'Rules and timing',prompt:KB.facts[0][0],kind:'mc',opts:shuffle(KB.facts[0][1]),answer:KB.facts[0][2],why:KB.facts[0][3]};
+  const types=Object.keys(S.quizTypes).filter(k=>S.quizTypes[k]);if(!types.length)return null;
+  const k=pick(types);const allCards=Object.keys(RAW.cards);
+  const mc=(prompt,right,wrongs,why,label)=>{const o=shuffle([right,...shuffle(wrongs.filter(w=>w!==right)).slice(0,3)]);return {k,label,prompt,kind:'mc',opts:o,answer:right,why}};
+  if(k==='cost'){const n=pick(allCards);const c=cost(n);return mc(`How much elixir does <b>${esc(n)}</b> cost?`,String(c),[c-1,c+1,c+2,c-2].filter(x=>x>0&&x<=10).map(String),`${esc(n)} costs ${c}.`,'Card cost')}
+  if(k==='ability'){const all=Object.entries(HERO_AB).map(([n,c])=>['Hero '+n,c]).concat(Object.entries(CHAMP_AB));const [n,c]=pick(all);return mc(`How much elixir does the <b>${esc(n)}</b> ability cost?`,String(c),['1','2','3','4','5'],`${esc(n)}'s ability costs ${c}. ${n.startsWith('Hero')?'Hero abilities are one use per deployment.':'Champion abilities can be reused after a cooldown while the champion is alive.'}`,'Ability cost')}
+  if(k==='evo'){const ks=Object.keys(EVO_KNOWN);const n=pick(ks);const c=EVO_KNOWN[n];return mc(`How many cycles does <b>Evo ${esc(n)}</b> need?`,String(c),['1','2','3'],`Listed as ${c} (gamingonphone evolution list). If the game shows a different number, change it in Settings so the match tracker uses yours.`,'Evolution cycles')}
+  if(k==='trade'){const [a,b,why]=pick(KB.counter);const d=cost(a)-cost(b);const s=d>0?`+${d}`:String(d);
+    return mc(`They play <b>${esc(a)}</b> (${cost(a)}). You answer with <b>${esc(b)}</b> (${cost(b)}) and it fully counters. What is your elixir trade?`,s,['+1','+2','+3','0','-1','-2'],`${cost(a)} − ${cost(b)} = ${s}. ${why}`,'Elixir trade')}
+  if(k==='counter'){const [a,b,why]=pick(KB.counter);const wr=shuffle(allCards.filter(n=>n!==b&&!KB.counter.some(x=>x[0]===a&&x[1]===n))).slice(0,6);
+    return mc(`Which card is the standard clean answer to <b>${esc(a)}</b>?`,b,wr,why,'Counter')}
+  if(k==='placement'){const [d,p]=pick(KB.placement);return mc(`Hog 2.6: which Cannon placement? <br><span class="mute">${esc(d)}</span>`,p,KB.placement.map(x=>x[1]),`${p}. From your Hog 2.6 Masterclass cheat sheet.`,'Placement')}
+  if(k==='math'){const f=pick(KB.facts);return {k,label:'Rules and timing',prompt:f[0],kind:'mc',opts:shuffle(f[1]),answer:f[2],why:f[3]}}
+  if(k==='deck'){const d=pick(poolDecks());const cs=d.c.map(cost).sort((a,b)=>a-b);const sub=pick(['avg','cycle','wc']);
+    const show=`<div class="cards" style="margin-top:8px">${d.c.map(n=>cardHTML(n,{size:'sm',role:d.r[n]})).join('')}</div>`;
+    if(sub==='avg'){const a=(d.c.reduce((s,n)=>s+cost(n),0)/8).toFixed(1);return mc(`What is this deck's average elixir?${show}`,a,[(+a-.3).toFixed(1),(+a+.3).toFixed(1),(+a+.6).toFixed(1),(+a-.6).toFixed(1)],`Sum ${d.c.reduce((s,n)=>s+cost(n),0)} ÷ 8 = ${a}.`,'Deck reading')}
+    if(sub==='cycle'){const c=cs.slice(0,4).reduce((a,b)=>a+b,0);return mc(`What is this deck's 4-card cycle?${show}`,String(c),[c-1,c+1,c+2,c-2].filter(x=>x>3).map(String),`Its 4 cheapest cards cost ${cs.slice(0,4).join(' + ')} = ${c}.`,'Deck reading')}
+    const wc=d.c.filter(n=>WINCON.includes(n));if(!wc.length)return quizQ(depth+1);const right=wc[0];const wr=d.c.filter(n=>!WINCON.includes(n));if(wr.length<3)return quizQ(depth+1);
+    return mc(`Which card is this deck's main win condition?${show}`,right,wr,`${esc(right)} is the card that takes towers in this list${wc.length>1?' (with '+wc.slice(1).map(esc).join(', ')+')':''}.`,'Deck reading')}
+}
+const QZ={};
+function startQuiz(){Object.assign(QZ,{i:0,n:S.quizN,res:[],cur:null});nextQuiz()}
+function nextQuiz(){
+  if(QZ.n>0&&QZ.i>=QZ.n)return quizDone();
+  QZ.cur=quizQ();QZ.cur.started=performance.now();QZ.i++;render.quiz();
+}
+function quizAnswer(given){const q=QZ.cur;clearInterval(qTimer);q.given=given;q.ok=given===q.answer;q.ms=performance.now()-q.started;QZ.res.push(q);render.quiz(true)}
+function quizDone(){const r=QZ.res;const by={};for(const q of r){(by[q.k]=by[q.k]||{n:0,ok:0}).n++;if(q.ok)by[q.k].ok++}
+  const rec={at:Date.now(),mode:'quiz',n:r.length,ok:r.filter(q=>q.ok).length,by};const H=store.get('history',[]);H.push(rec);store.set('history',H.slice(-200));view='quizsum';render.page()}
+
+/* ---------- rendering ---------- */
+let view='home';
+const $=s=>ROOT.querySelector(s);
+const R_ALL=s=>ROOT.querySelectorAll(s);
+const app=ROOT.getElementById('app');
+const QLABEL={elixir:'Opponent elixir',diff:'Elixir lead',hand:'Card tracking',cycle:'Cycle',evo:'Evolution watch',cost:'Card cost',ability:'Ability cost',trade:'Elixir trade',counter:'Counter',placement:'Placement',deck:'Deck reading',math:'Rules and timing'};
+const render={
+page(){
+  const nav=`<div class="top"><div class="brand">${dropSVG}<div><h1>Elixir Lab</h1><p class="mute small">Count their elixir, track their cycle, call their evo.</p></div></div>
+  <nav class="tabs" role="tablist">${[['home','Train'],['settings','Settings'],['stats','Progress']].map(([k,l])=>`<button class="tab" role="tab" data-view="${k}" aria-selected="${view===k||(k==='home'&&['match','quiz','quizsum','summary'].includes(view))}">${l}</button>`).join('')}</nav></div>`;
+  let body='';
+  if(view==='home')body=render.home();
+  if(view==='settings')body=render.settings();
+  if(view==='stats')body=render.stats();
+  if(view==='match')body=render.match();
+  if(view==='quiz'||view==='quizsum')body=view==='quiz'?'<div id="quiz"></div>':render.quizSum();
+  if(view==='summary')body='<div id="sum"></div>';
+  app.innerHTML=(view==='match'?'':nav)+body;
+  if(view==='match'){render.feed();render.hud();render.controls()}
+  if(view==='quiz')render.quiz();
+  if(view==='summary'&&G.lastRec)render.summary(G.lastRec);
+},
+home(){
+  const H=store.get('history',[]);const last=H.slice(-1)[0];
+  const od=S.oppDeck>=0?DECKS[S.oppDeck]:null;const md=DECKS[S.myDeck>=0?S.myDeck:myDefault()];
+  return `<section class="modes">
+   ${Object.entries(PRESETS).map(([k,p])=>`<button class="mode" data-preset="${k}"><span class="k">Match drill</span><h3>${p.label}</h3><p>${p.sub}</p></button>`).join('')}
+   <button class="mode" data-quiz="1"><span class="k">Knowledge</span><h3>Card IQ quiz</h3><p>Costs, ability costs, trades, counters, Hog 2.6 placements, deck reading, timing rules.</p></button>
+  </section>
+  <section class="panel row" style="justify-content:space-between">
+   <div style="min-width:0;flex:1"><p class="lbl">Next match</p><p><b>You:</b> ${esc(md.t)} · <b>Opponent:</b> ${od?esc(od.t):'random from '+S.oppPool.map(g=>GROUPS[g].split(':')[0]).join(', ')} (${poolDecks().length} decks)</p>
+   <p class="mute small">${S.youPlay?'You play your own hand':'Watch only'} · ${S.speed}× speed · question every ${S.qEvery==='plays'?S.qPlays+' of their plays':'~'+S.qSecs+' s'} · ${S.timer?S.timer+' s to answer':'no time limit'} · tolerance ±${S.tol}</p></div>
+   <div class="row"><button class="btn" data-view="settings">Customize</button><button class="btn pri" data-go="custom">Start custom match</button></div>
+  </section>
+  ${last?`<p class="mute small">Last session: ${last.mode==='quiz'?'Card IQ quiz':'match vs '+esc(last.opp||'')} · ${last.ok}/${last.n} right${last.mae!=null?` · average elixir miss ${last.mae.toFixed(2)}`:''}</p>`:''}
+  <section class="panel"><h3>How the counting works</h3><p class="mute small" style="margin-top:6px">You both fill up at the same speed, so you never count seconds. Count the difference. Know every card's cost, and keep a running number: they play Hog (4), you answer with Cannon (3), you're up 1. Then read their elixir off your own bar: if you're up 1 and you have 5, they have 4. Only three things break the balance: their pump (+1 a tick), abilities (champion or hero, they cost elixir), and anyone sitting at 10 leaking.</p></section>`;
+},
+settings(){
+  const segs=(key,opts)=>`<div class="seg" role="group">${opts.map(([v,l])=>`<button aria-pressed="${S[key]==v}" data-set="${key}" data-val="${v}">${l}</button>`).join('')}</div>`;
+  const ck=(key,label,obj)=>`<label class="chk"><input type="checkbox" id="s-${obj||''}${key}" data-ck="${key}" ${obj?`data-obj="${obj}"`:''} ${(obj?S[obj][key]:S[key])?'checked':''}> <span>${label}</span></label>`;
+  const evos=[...new Set(DECKS.flatMap(d=>Object.entries(d.r).filter(([n,r])=>r==='evo').map(([n])=>n)))].sort();
+  return `<section class="set">
+   <fieldset><legend>Decks</legend>
+    <div class="fld"><span class="lbl">Opponent pool</span>${Object.entries(GROUPS).map(([g,l])=>`<label class="chk"><input type="checkbox" id="pool-${g}" data-pool="${g}" ${S.oppPool.includes(g)?'checked':''}> <span>${l} <span class="mute">(${DECKS.filter(d=>d.g.includes(g)).length})</span></span></label>`).join('')}</div>
+    <div class="fld"><span class="lbl">Fixed opponent deck</span><button class="btn" data-pickdeck="opp">${S.oppDeck>=0?esc(DECKS[S.oppDeck].t):'Random from pool'}</button>${S.oppDeck>=0?'<button class="btn" data-clear="oppDeck">Back to random</button>':''}</div>
+    <div class="fld"><span class="lbl">Your deck</span><button class="btn" data-pickdeck="me">${esc(DECKS[S.myDeck>=0?S.myDeck:myDefault()].t)}</button></div>
+    <div id="picker"></div>
+   </fieldset>
+   <fieldset><legend>Match</legend>
+    <div class="fld"><span class="lbl">Speed ${S.speed}×</span>${segs('speed',[[0.5,'0.5×'],[1,'1×'],[1.5,'1.5×'],[2,'2×'],[3,'3×']])}</div>
+    <div class="fld"><span class="lbl">Start the clock at</span>${segs('startAt',[[0,'0:00'],[60,'1:00'],[120,'2:00 (2×)'],[180,'OT']])}</div>
+    <div class="fld"><span class="lbl">Starting elixir</span>${segs('startElixir',[[5,'5'],[7,'7'],[10,'10']])}</div>
+    <div class="fld"><span class="lbl">Overtime</span>${segs('overtime',[['off','Off'],['on','Always'],['random','Random']])}</div>
+    ${ck('youPlay','You play your own hand (tap cards)')}
+    ${ck('autoMe','Let the computer play your hand (watch-only with a real opponent lead)')}
+   </fieldset>
+   <fieldset><legend>Opponent behaviour</legend>
+    <div class="fld"><span class="lbl">Style</span>${segs('style',[['mixed','Mixed'],['patient','Patient'],['aggressive','Aggressive'],['cycle','Cycle']])}</div>
+    ${ck('react','Reacts to your plays')}
+    ${ck('abilities','Uses champion and hero abilities (they cost elixir)')}
+    <div class="fld"><span class="lbl">Elixir Collector lifetime</span>${segs('pumpLife',[['random','Gets hit (random)'],['full','Full 70 s']])}</div>
+    ${ck('evoStartCharged','Evolutions start the match charged')}
+   </fieldset>
+   <fieldset><legend>Questions</legend>
+    <div class="fld"><span class="lbl">Ask</span>${segs('qEvery',[['plays','Every N of their plays'],['time','On a timer']])}</div>
+    ${S.qEvery==='plays'?`<div class="fld"><span class="lbl">N = ${S.qPlays}</span>${segs('qPlays',[[1,'1'],[2,'2'],[3,'3'],[4,'4'],[6,'6']])}</div>`:`<div class="fld"><span class="lbl">About every</span>${segs('qSecs',[[8,'8 s'],[15,'15 s'],[25,'25 s'],[40,'40 s']])}</div>`}
+    <div class="fld"><span class="lbl">Time to answer</span>${segs('timer',[[0,'None'],[3,'3 s'],[5,'5 s'],[10,'10 s'],[20,'20 s']])}</div>
+    <div class="fld"><span class="lbl">Elixir tolerance</span>${segs('tol',[[0,'Exact'],[1,'±1']])}</div>
+    <div class="fld"><span class="lbl">Question types</span>${['elixir','diff','hand','cycle','evo'].map(k=>ck(k,QLABEL[k],'qTypes')).join('')}</div>
+   </fieldset>
+   <fieldset><legend>What you can see</legend>
+    ${ck('showOppName','Their deck name (off hides it until the match review)')}
+    ${ck('showOppElixir','Their elixir bar (learning mode)')}
+    ${ck('memory','Memory mode: no play history, each card flashes for 2 s')}
+    ${ck('showLog','Their play history (off = only the latest card)')}
+    ${ck('revealDeck','Their full deck from the start (off = only cards you have seen)')}
+    ${ck('showClock','Match clock')}
+    ${ck('showPhase','Elixir phase badge (1× / 2× / 3×)')}
+    ${ck('showPump','Their pump status')}
+   </fieldset>
+   <fieldset><legend>Card IQ quiz</legend>
+    <div class="fld"><span class="lbl">Questions</span>${segs('quizN',[[10,'10'],[15,'15'],[30,'30'],[0,'Endless']])}</div>
+    <div class="fld"><span class="lbl">Time per question</span>${segs('quizTimer',[[0,'None'],[5,'5 s'],[10,'10 s'],[15,'15 s']])}</div>
+    <div class="fld"><span class="lbl">Topics</span>${Object.keys(DEFAULTS.quizTypes).map(k=>ck(k,QLABEL[k],'quizTypes')).join('')}</div>
+   </fieldset>
+   <fieldset style="grid-column:1/-1"><legend>Evolution cycles</legend>
+    <p class="note">Values marked “listed” come from a public evolution list; the rest default to 2 and may be wrong. If your game shows a different number of pips, set it here and every match uses it.</p>
+    <div class="tblw"><table><thead><tr><th>Card</th><th>Cycles</th><th>Source</th></tr></thead><tbody>
+    ${evos.map(n=>`<tr><td>${esc(n)}</td><td><select id="evo-${esc(n).replace(/\W/g,'')}" data-evo="${esc(n)}">${[1,2,3].map(v=>`<option ${evoCycles(n)===v?'selected':''}>${v}</option>`).join('')}</select></td><td class="mute small">${S.evoOverride[n]!=null?'Your setting':EVO_KNOWN[n]!=null?'Listed':'Default, unverified'}</td></tr>`).join('')}
+    </tbody></table></div>
+   </fieldset>
+  </section>
+  <div class="row"><button class="btn" data-reset="1">Reset all settings</button><button class="btn pri" data-go="custom">Start a match with these settings</button></div>`;
+},
+picker(which){
+  const el=$('#picker');if(!el)return;
+  const q=(el.dataset.q||'').toLowerCase();const grp=el.dataset.g||'';
+  let list=which==='me'?DECKS.filter(d=>d.g.includes('mine')||d.g.includes('liked')):DECKS;
+  if(grp)list=list.filter(d=>d.g.includes(grp));
+  if(q)list=list.filter(d=>(d.t+' '+d.c.join(' ')+' '+(d.a||[]).join(' ')).toLowerCase().includes(q));
+  list=list.slice().sort((a,b)=>(b.tier==='main')-(a.tier==='main'));
+  el.innerHTML=`<div class="deckpick"><div class="row"><input type="search" id="dq" placeholder="Search deck or card (e.g. Golem, Hog EQ)" value="${esc(el.dataset.q||'')}" style="flex:1">
+   ${which==='opp'?`<select id="dg" style="width:auto"><option value="">All groups</option>${Object.entries(GROUPS).map(([g,l])=>`<option value="${g}" ${grp===g?'selected':''}>${l}</option>`).join('')}</select>`:''}</div>
+   <div class="dlist">${list.slice(0,120).map(d=>`<button class="ditem" data-choose="${which}" data-i="${d.i}" aria-pressed="${(which==='opp'?S.oppDeck:S.myDeck)===d.i}"><div style="min-width:0;flex:1"><div class="dt">${d.tier==='main'?'★ ':''}${esc(d.t)}</div><div class="mute small">${esc((d.a||[]).join(' · '))}${d.m?` · you ${d.m[0]}–${d.m[1]}`:''}</div></div><div class="cards">${d.c.map(n=>cardHTML(n,{size:'sm',role:d.r[n]})).join('')}</div></button>`).join('')||'<p class="mute small" style="padding:8px">No deck matches that search.</p>'}</div>
+   <p class="mute small">${list.length} decks${list.length>120?' (showing 120, search to narrow)':''}</p></div>`;
+  el.dataset.which=which;
+  const dq=$('#dq');dq.oninput=()=>{el.dataset.q=dq.value;const pos=dq.selectionStart;render.picker(which);const n=$('#dq');n.focus();n.setSelectionRange(pos,pos)};
+  const dg=$('#dg');if(dg)dg.onchange=()=>{el.dataset.g=dg.value;render.picker(which)};
+},
+match(){
+  const HOW={
+   full:'Press Start. Both sides play: tap your cards when you have the elixir. Keep a running “up 2 / down 3” count from the cards each side plays, and read their elixir off your own bar. Every few of their plays the game pauses and asks.',
+   rapid:'Same as a full match, but it asks after every card they play. Each card shows big with its cost. Keep your “up / down” count and compare it with your bar. 10 seconds per answer.',
+   cycle:'Press Start and watch their plays. Remember the order: a card they play goes to the back of their queue and comes back after 4 more plays. Questions ask which 4 cards are in their hand, how many plays until a card returns, and when their evolution is ready.',
+   double:'Starts in double elixir. Both sides fill twice as fast, so cards come quicker, but the up / down count works exactly the same. One minute.',
+   custom:'Press Start. Questions follow your Settings.'};
+  return `<details class="howd" ${G.t>S.startAt?'':'open'}><summary>How this drill works</summary><p>${HOW[G.mode]||HOW.custom}</p><p class="mute">Keyboard: Space pauses, number keys answer, Enter continues. Memory mode hides their play history and flashes each card for 2 seconds, so you have to remember it.</p></details>
+  <section class="hud" id="hud">
+   <div class="clockbar"><div class="row"><span class="clock mono" id="clock"></span><span class="phase" id="phase"></span></div><div class="ctl" id="ctl"></div></div>
+   <div class="side opp"><div class="who"><b>Opponent</b><div class="status" id="opstatus"></div>${S.showOppName?`<span class="mute small" id="oppname">${esc(G.op.deck.t)}</span>`:''}</div>
+     <div class="big" id="bigplay"><span class="mute small">Their plays will show here.</span></div>
+     <div class="elix" id="oppelix" ${S.showOppElixir?'':'hidden'}><span class="enum" id="oenum"></span><div class="ebar" id="oebar">${'<i><b></b></i>'.repeat(10)}</div></div>
+<p class="lbl" id="histlbl" style="margin-top:2px" ${S.memory?'hidden':''}>Their recent plays</p>
+     <div class="feed" id="opfeed" aria-live="polite" ${S.memory?'hidden':''}></div>
+     <details ${S.revealDeck?'':'hidden'}><summary class="mute small">Their deck</summary><div class="cards" style="margin-top:8px" id="opdeck"></div></details>
+   </div>
+   ${S.youPlay?`<div class="side">
+     <div class="hand" id="hand"></div>
+     <div class="elix"><span class="enum" id="enum"></span><div class="ebar" id="ebar">${'<i><b></b></i>'.repeat(10)}</div></div>
+</div>`:`<div class="side"><div class="who"><b>Watch mode</b><span class="mute small">You don't play. Count their elixir.</span></div><p class="mute small">Their elixir bar is hidden on purpose. Use the play times above and the clock.</p></div>`}
+  </section>`;
+},
+hud(){
+  if(view!=='match')return;
+  const c=$('#clock');if(c){c.textContent=S.showClock?fmtT(G.t):'—:—';}
+  const ph=$('#phase');if(ph){const p=phaseAt(G.t);ph.textContent=S.showPhase?p+'× elixir'+(G.t>=180?' · OT':''):'';ph.className='phase'+(S.showPhase&&p>1?' x'+p:'');ph.hidden=!S.showPhase}
+  const os=$('#opstatus');if(os){const chips=[];const pumps=G.op.pumps.filter(p=>p.alive);if(S.showPump&&pumps.length)chips.push(`<span class="chip p">Pump up · ${pumps.map(p=>p.made+'/'+PUMP.max).join(', ')} made</span>`);
+    for(const n in G.op.out)chips.push(`<span class="chip g">${esc(n)} on the field</span>`);
+    chips.push(`<span class="chip">${G.op.plays.filter(e=>!e.ability).length} plays</span>`);
+    os.innerHTML=chips.join('')}
+  if(S.showOppElixir){const e=G.op.elixir;const n=$('#oenum');if(n)n.textContent=Math.floor(e);R_ALL('#oebar b').forEach((b,k)=>{b.style.transform=`scaleX(${Math.max(0,Math.min(1,e-k))})`})}
+  if(S.youPlay){const e=G.me.elixir;const n=$('#enum');if(n)n.textContent=Math.floor(e);
+    const bars=ROOT.querySelectorAll('#ebar b');bars.forEach((b,k)=>{const f=Math.max(0,Math.min(1,e-k));b.style.transform=`scaleX(${f})`});
+    ROOT.querySelectorAll('#hand button.card').forEach(b=>{const nm=b.dataset.card;b.disabled=!G.running||G.qOpen||!canAfford(G.me,nm)||S.autoMe})}
+},
+feed(){
+  if(view!=='match')return;
+  const mk=(who,box)=>{const el=$(box);if(!el)return;let evs=G.events.filter(e=>e.who===who&&e.card);
+    if(who==='op'&&!S.showLog)evs=evs.slice(-1);
+    el.innerHTML=evs.slice(-14).map((e,k,a)=>`<div class="ev ${k===a.length-1?'new':''}">${cardHTML(e.card,{size:'sm',role:e.role==='evo'?'evo':e.role==='hero'?'hero':null,evolved:e.evolved,cost:e.cost})}${e.ability?'<span class="abil">ABILITY</span>':''}<span class="ts">${fmtT(e.t)}</span></div>`).join('')||'<span class="mute small">No plays yet</span>';
+    el.scrollLeft=el.scrollWidth};
+  mk('op','#opfeed');mk('me','#mefeed');
+  const bp=$('#bigplay');if(bp){const last=[...G.events].reverse().find(e=>e.who==='op'&&e.card);
+    if(last&&S.memory&&G.lastBig!==last){clearTimeout(G.memT);G.memShown=false;G.lastBig=last;G.memT=setTimeout(()=>{const b=$('#bigplay');if(b&&S.memory)b.innerHTML=`<div class="memo">?</div><div><div class="bigtxt">Remember it</div><div class="mute small">${G.op.plays.filter(e=>!e.ability).length} plays so far</div></div>`},2000)}
+    const skipBig=last&&S.memory&&G.lastBig===last&&G.memShown;
+    if(last&&S.memory)G.memShown=true;
+    if(last&&!skipBig)bp.innerHTML=`<div class="ev new">${cardHTML(last.card,{size:'lg',role:last.role==='evo'?'evo':last.role==='hero'?'hero':null,evolved:last.evolved,cost:last.cost})}</div><div><div class="bigtxt">${last.ability?esc(last.card)+' ability':esc(last.card)}${last.evolved?' (evolved)':''}</div><div class="mono" style="font-size:20px;color:#f4a0f6">−${last.cost} elixir</div><div class="mute small mono">played at ${fmtT(last.t)}</div></div>`}
+  const od=$('#opdeck');if(od)od.innerHTML=G.op.deck.c.filter(n=>S.revealDeck||G.op.seen.has(n)).map(n=>cardHTML(n,{size:'sm',role:G.op.roles[n],pips:G.op.roles[n]==='evo'&&S.qTypes.evo?null:null})).join('');
+  const h=$('#hand');if(h&&S.youPlay){const p=G.me;h.innerHTML=p.hand.map(n=>cardHTML(n,{button:1,role:p.roles[n],pips:p.roles[n]==='evo'?p.evo[n]:null,evolved:p.roles[n]==='evo'&&p.evo[n]>=evoCycles(n)})).join('')+(p.queue[0]?`<div class="nextc">${cardHTML(p.queue[0],{size:'sm',role:p.roles[p.queue[0]]})}NEXT</div>`:'');
+    h.querySelectorAll('button.card').forEach(b=>b.onclick=()=>{if(!G.running||G.qOpen)return;if(doPlay(G.me,b.dataset.card))afterPlay('me')})}
+  render.hud();
+},
+controls(){
+  const c=$('#ctl');if(!c)return;
+  c.innerHTML=G.over?`<button class="btn pri" data-go="again">New match</button>`:`${G.running?'<button class="btn" data-pause="1">Pause</button>':`<button class="btn pri" data-start="1">${G.t>S.startAt?'Resume':'Start'}</button>`}<button class="btn" data-ask="1" ${G.running?'':'disabled'}>Ask me now</button><button class="btn" data-peek="1" aria-pressed="${S.showOppElixir}">${S.showOppElixir?'Hide':'Show'} their elixir</button><button class="btn" data-mem="1" aria-pressed="${S.memory}">Memory mode</button><button class="btn" data-end="1">End</button><button class="btn" data-view="home" aria-label="Exit drill">Exit</button>`;
+},
+question(q){
+  const w=document.createElement('div');w.className='qwrap';w.id='qwrap';
+  let input='';
+  if(q.kind==='pad'){const max=q.max??10;input=`<div class="pad">${Array.from({length:max+1},(_,v)=>`<button data-a="${v}">${v}</button>`).join('')}</div>`}
+  if(q.kind==='diff'){input=`<div class="pad">${Array.from({length:21},(_,k)=>k-10).filter(v=>v>=-10&&v<=10).map(v=>`<button data-a="${v}">${v>0?'+'+v:v}</button>`).join('')}</div><p class="mute small">+ means you are up, − means they are up.</p>`}
+  if(q.kind==='multi'){input=`<div class="cards" id="msel">${q.opts.map(n=>cardHTML(n,{button:1,role:G.op.roles[n]})).join('')}</div><button class="btn pri" id="msub" disabled>Lock in 4 cards</button>`}
+  const recent=G.events.filter(e=>e.who==='op'&&e.card).slice(S.showLog?-4:-1);
+  const ctx=!S.memory&&(q.k==='elixir'||q.k==='diff')&&recent.length?`<div><p class="lbl">Their last ${recent.length>1?recent.length+' plays':'play'} · clock now ${fmtT(q.t)}</p><div class="cards" style="margin-top:6px">${recent.map(e=>`<div class="ev" style="display:flex;flex-direction:column;align-items:center;gap:2px">${cardHTML(e.card,{size:'sm',role:e.role==='evo'?'evo':e.role==='hero'?'hero':null,cost:e.cost})}<span style="font-size:11px;font-weight:800;max-width:70px;text-align:center;line-height:1.1">${esc(e.card)}${e.ability?' ability':''} −${e.cost}</span><span class="mono" style="font-size:10px;color:var(--mute)">${fmtT(e.t)}</span></div>`).join('')}</div></div>`:'';
+  w.innerHTML=`<div class="q" role="dialog" aria-modal="true" aria-labelledby="qh"><div class="row" style="justify-content:space-between"><span class="qk">${esc(q.label)} · ${fmtT(q.t)}</span><span class="qk">${G.questions.length+1}</span></div><h2 id="qh">${q.prompt}</h2>${ctx}${S.timer?'<div class="timer"><b id="tb"></b></div>':''}${input}<div id="fb"></div></div>`;
+  ROOT.querySelector('.labroot').appendChild(w);
+  w.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{if(q.done)return;q.done=1;answer(q,+b.dataset.a)});
+  if(q.kind==='multi'){const sel=new Set();w.querySelectorAll('#msel button.card').forEach(b=>b.onclick=()=>{if(q.done)return;const n=b.dataset.card;sel.has(n)?sel.delete(n):sel.size<4&&sel.add(n);b.classList.toggle('sel',sel.has(n));$('#msub').disabled=sel.size!==4});
+    $('#msub').onclick=()=>{if(q.done)return;q.done=1;answer(q,[...sel])}}
+  if(S.timer){const T=S.timer*1000;const st=performance.now();qTimer=setInterval(()=>{const f=1-(performance.now()-st)/T;const tb=$('#tb');if(tb)tb.style.transform=`scaleX(${Math.max(0,f)})`;if(f<=0&&!q.done){q.done=1;answer(q,null)}},50)}
+  w.querySelector('button')?.focus();
+},
+feedback(q){
+  const fb=$('#fb');if(!fb)return;
+  let val='';
+  if(q.k==='elixir')val=`They had <b>${q.answer}</b> <span class="mono small">(${q.exact.toFixed(2)})</span>${q.given!=null?`, you said ${q.given}`:', time ran out'}`;
+  else if(q.k==='diff')val=`Right answer: <b>${q.answer>0?'you\'re up '+q.answer:q.answer<0?'they\'re up '+(-q.answer):'even'}</b> (${q.answer>0?'+':''}${q.answer})${q.given!=null?`, you said ${q.given>0?'+':''}${q.given}`:', time ran out'}`;
+  else if(q.kind==='multi')val=`In hand: <b>${q.answer.map(esc).join(', ')}</b>`;
+  else val=`Answer: <b>${q.answer}</b>${q.given!=null?`, you said ${q.given}`:', time ran out'}`;
+  ROOT.querySelectorAll('#qwrap [data-a]').forEach(b=>{b.disabled=true;if(+b.dataset.a===q.answer)b.style.borderColor='var(--good)'});
+  if(q.kind==='multi')ROOT.querySelectorAll('#msel button.card').forEach(b=>{b.disabled=true;if(q.answer.includes(b.dataset.card))b.classList.add('sel')});
+  fb.innerHTML=`<div class="fb ${q.ok?'ok':'no'}"><span class="v">${q.ok?'Right':'Not quite'}</span><span>${val}</span><span class="why">${q.why()}</span></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn pri" id="qnext">Continue <span class="kbd">Enter</span></button></div>`;
+  const nx=$('#qnext');nx.focus();nx.onclick=()=>{closeQ();render.hud()};
+},
+summary(rec){
+  G.lastRec=rec;
+  if(view!=='summary'){view='summary';render.page();return}
+  const el=$('#sum');const qs=G.questions;
+  const W=640,Hh=200,pad=34,t0=S.startAt,t1=Math.max(G.t,t0+1);
+  const x=t=>pad+(t-t0)/(t1-t0)*(W-pad-10),y=v=>Hh-24-(v/10)*(Hh-40);
+  const pts=G.samples.map(s=>`${x(s.t).toFixed(1)},${y(s.op).toFixed(1)}`).join(' ');
+  const grid=[0,2,4,6,8,10].map(v=>`<line x1="${pad}" x2="${W-10}" y1="${y(v)}" y2="${y(v)}" stroke="#2c3a60" stroke-width="1"/><text x="${pad-8}" y="${y(v)+4}" fill="#93a0c4" font-size="11" text-anchor="end" font-family="JetBrains Mono,monospace">${v}</text>`).join('');
+  const ticks=[];for(let t=Math.ceil(t0/30)*30;t<=t1;t+=30)ticks.push(`<text x="${x(t)}" y="${Hh-6}" fill="#93a0c4" font-size="11" text-anchor="middle" font-family="JetBrains Mono,monospace">${fmtT(t)}</text>`);
+  const guesses=qs.filter(q=>q.k==='elixir'&&q.given!=null).map(q=>`<circle cx="${x(q.t)}" cy="${y(q.given)}" r="5" fill="${q.ok?'#3fcf8e':'#ff5d6c'}" stroke="#0e1424" stroke-width="1.5"><title>${fmtT(q.t)}: you said ${q.given}, real ${q.exact.toFixed(1)}</title></circle>`).join('');
+  const plays=G.events.filter(e=>e.who==='op'&&e.card).map(e=>`<line x1="${x(e.t)}" x2="${x(e.t)}" y1="${y(e.before)}" y2="${y(e.after)}" stroke="#f2b632" stroke-width="2"><title>${esc(e.card)} −${e.cost}</title></line>`).join('');
+  const dbl=t0<120&&t1>120?`<rect x="${x(120)}" y="${y(10)}" width="${x(Math.min(t1,180))-x(120)}" height="${y(0)-y(10)}" fill="#d23fd6" opacity=".07"/>`:'';
+  const byRows=Object.entries(rec.by).map(([k,v])=>`<tr><td>${QLABEL[k]}</td><td class="mono">${v.ok}/${v.n}</td><td class="mono ${v.ok/v.n>=.7?'good':'bad'}">${Math.round(v.ok/v.n*100)}%</td></tr>`).join('');
+  el.innerHTML=`<section class="panel" style="display:flex;flex-direction:column;gap:14px">
+   <div class="top"><h2>Match review</h2><div class="row"><button class="btn" data-go="home">Change drill</button><button class="btn pri" data-go="again">Play again</button></div></div>
+   <p class="mute small">Opponent: ${esc(G.op.deck.t)} · their style: ${G.style} · ended at ${fmtT(G.t)}</p>
+   <div class="kpis"><div class="kpi"><div class="n">${rec.ok}/${rec.n}</div><div class="l">Questions right</div></div>
+    <div class="kpi"><div class="n">${rec.mae!=null?rec.mae.toFixed(2):'—'}</div><div class="l">Avg elixir miss</div></div>
+    <div class="kpi"><div class="n">${G.op.plays.filter(e=>!e.ability).length}</div><div class="l">Cards they played</div></div>
+    <div class="kpi"><div class="n">${rec.oppLeak.toFixed(1)}</div><div class="l">Elixir they leaked</div></div>
+    ${S.youPlay?`<div class="kpi"><div class="n">${rec.myLeak.toFixed(1)}</div><div class="l">Elixir you leaked</div></div>`:''}</div>
+   <div><h3>Their elixir, minute by minute</h3><p class="mute small">Purple line: what they really had. Gold ticks: each play. Dots: your guesses (green right, red wrong). Shaded: double elixir.</p>
+   <div class="chart"><svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Opponent elixir over time with your guesses">${dbl}${grid}${ticks.join('')}<polyline points="${pts}" fill="none" stroke="#d23fd6" stroke-width="2.5" stroke-linejoin="round"/>${plays}${guesses}</svg></div></div>
+   ${byRows?`<div class="tblw"><table><thead><tr><th>Question type</th><th>Score</th><th>Rate</th></tr></thead><tbody>${byRows}</tbody></table></div>`:''}
+   <details><summary class="mute">Every question</summary><div class="tblw"><table><thead><tr><th>Time</th><th>Type</th><th>Answer</th><th>You</th></tr></thead><tbody>${qs.map(q=>`<tr><td class="mono">${fmtT(q.t)}</td><td>${q.label}</td><td>${Array.isArray(q.answer)?q.answer.map(esc).join(', '):q.answer}${q.exact!=null?` <span class="mute mono">(${q.exact.toFixed(1)})</span>`:''}</td><td class="${q.ok?'good':'bad'}">${q.given==null?'timeout':Array.isArray(q.given)?q.given.map(esc).join(', '):q.given}</td></tr>`).join('')}</tbody></table></div></details>
+  </section>`;
+},
+quiz(showFb){
+  const el=$('#quiz');if(!el)return;const q=QZ.cur;if(!q){el.innerHTML='<p class="mute">Turn on at least one topic in Settings.</p>';return}
+  el.innerHTML=`<section class="q" style="margin:0 auto;border-color:var(--gold)"><div class="row" style="justify-content:space-between"><span class="qk" style="color:var(--gold)">${esc(q.label)}</span><span class="qk mono">${QZ.i}${QZ.n?'/'+QZ.n:''} · ${QZ.res.filter(r=>r.ok).length} right</span></div>
+   <h2>${q.prompt}</h2>${S.quizTimer&&!showFb?'<div class="timer"><b id="tb"></b></div>':''}
+   <div class="opts">${q.opts.map(o=>`<button data-o="${esc(o)}" ${showFb?'disabled':''} class="${showFb?(o===q.answer?'ok':o===q.given?'no':''):''}">${esc(o)}</button>`).join('')}</div>
+   ${showFb?`<div class="fb ${q.ok?'ok':'no'}"><span class="v">${q.ok?'Right':q.given==null?'Time':'Not quite'}</span><span class="why">${q.why}</span></div><div class="row" style="justify-content:space-between"><button class="btn" data-quizend="1">Finish</button><button class="btn gold" id="qznext">Next <span class="kbd">Enter</span></button></div>`:''}
+  </section>`;
+  el.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>quizAnswer(b.dataset.o));
+  if(showFb){const n=$('#qznext');n.focus();n.onclick=nextQuiz}
+  else{el.querySelector('[data-o]')?.focus();if(S.quizTimer){const T=S.quizTimer*1000,st=performance.now();clearInterval(qTimer);qTimer=setInterval(()=>{const f=1-(performance.now()-st)/T;const tb=$('#tb');if(tb)tb.style.transform=`scaleX(${Math.max(0,f)})`;if(f<=0){clearInterval(qTimer);quizAnswer(null)}},50)}}
+},
+quizSum(){
+  const r=QZ.res||[];const by={};for(const q of r){(by[q.k]=by[q.k]||{n:0,ok:0}).n++;if(q.ok)by[q.k].ok++}
+  const miss=r.filter(q=>!q.ok);
+  return `<section class="panel" style="display:flex;flex-direction:column;gap:12px"><div class="top"><h2>Card IQ: ${r.filter(q=>q.ok).length}/${r.length}</h2><div class="row"><button class="btn" data-go="home">Back</button><button class="btn gold" data-quiz="1">Go again</button></div></div>
+   <div class="tblw"><table><thead><tr><th>Topic</th><th>Score</th></tr></thead><tbody>${Object.entries(by).map(([k,v])=>`<tr><td>${QLABEL[k]}</td><td class="mono ${v.ok/v.n>=.7?'good':'bad'}">${v.ok}/${v.n}</td></tr>`).join('')}</tbody></table></div>
+   ${miss.length?`<h3>Review your misses</h3><div style="display:flex;flex-direction:column;gap:8px">${miss.map(q=>`<div class="fb no"><span>${q.prompt.replace(/<div class="cards"[\s\S]*<\/div>/,'')}</span><span><b>${esc(q.answer)}</b>${q.given!=null?` · you said ${esc(q.given)}`:''}</span><span class="why">${q.why}</span></div>`).join('')}</div>`:'<p class="good">Clean sheet.</p>'}
+  </section>`;
+},
+stats(){
+  const H=store.get('history',[]);
+  if(!H.length)return `<section class="panel"><h2>Progress</h2><p class="mute" style="margin-top:6px">Your sessions show up here after your first match or quiz: questions right, average elixir miss, and which question types you miss most. Saved in this browser only.</p></section>`;
+  const matches=H.filter(h=>h.mode!=='quiz');const el=matches.filter(h=>h.mae!=null);
+  const agg={};for(const h of H)for(const[k,v]of Object.entries(h.by||{})){(agg[k]=agg[k]||{n:0,ok:0});agg[k].n+=v.n;agg[k].ok+=v.ok}
+  const W=600,Hh=140,p=30;const last=el.slice(-30);const mx=Math.max(2,...last.map(h=>h.mae));
+  const pts=last.map((h,k)=>`${p+k*(W-p-10)/Math.max(1,last.length-1)},${Hh-20-(h.mae/mx)*(Hh-40)}`).join(' ');
+  return `<section class="panel" style="display:flex;flex-direction:column;gap:14px"><h2>Progress</h2>
+   <div class="kpis"><div class="kpi"><div class="n">${H.length}</div><div class="l">Sessions</div></div><div class="kpi"><div class="n">${H.reduce((a,h)=>a+h.n,0)}</div><div class="l">Questions answered</div></div>
+   <div class="kpi"><div class="n">${Math.round(H.reduce((a,h)=>a+h.ok,0)/Math.max(1,H.reduce((a,h)=>a+h.n,0))*100)}%</div><div class="l">Overall right</div></div>
+   ${el.length?`<div class="kpi"><div class="n">${(el.slice(-5).reduce((a,h)=>a+h.mae,0)/Math.min(5,el.length)).toFixed(2)}</div><div class="l">Avg elixir miss, last 5</div></div>`:''}</div>
+   ${last.length>1?`<div><h3>Average elixir miss per match</h3><p class="mute small">Lower is better. 0 means every guess was exact.</p><div class="chart"><svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Average elixir miss per match">
+    ${[0,mx/2,mx].map(v=>`<line x1="${p}" x2="${W-10}" y1="${Hh-20-(v/mx)*(Hh-40)}" y2="${Hh-20-(v/mx)*(Hh-40)}" stroke="#2c3a60"/><text x="${p-6}" y="${Hh-16-(v/mx)*(Hh-40)}" fill="#93a0c4" font-size="11" text-anchor="end" font-family="JetBrains Mono,monospace">${v.toFixed(1)}</text>`).join('')}
+    <polyline points="${pts}" fill="none" stroke="#d23fd6" stroke-width="2.5"/>${last.map((h,k)=>`<circle cx="${p+k*(W-p-10)/Math.max(1,last.length-1)}" cy="${Hh-20-(h.mae/mx)*(Hh-40)}" r="${k===last.length-1?5:3}" fill="#d23fd6"/>`).join('')}</svg></div></div>`:''}
+   <div class="tblw"><table><thead><tr><th>Question type</th><th>Right</th><th>Rate</th></tr></thead><tbody>${Object.entries(agg).sort((a,b)=>a[1].ok/a[1].n-b[1].ok/b[1].n).map(([k,v])=>`<tr><td>${QLABEL[k]||k}</td><td class="mono">${v.ok}/${v.n}</td><td class="mono ${v.ok/v.n>=.7?'good':'bad'}">${Math.round(v.ok/v.n*100)}%</td></tr>`).join('')}</tbody></table></div>
+   <div class="tblw"><table><thead><tr><th>When</th><th>Drill</th><th>Score</th><th>Elixir miss</th></tr></thead><tbody>${H.slice(-15).reverse().map(h=>`<tr><td class="mono small">${new Date(h.at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td>${h.mode==='quiz'?'Card IQ':esc((PRESETS[h.mode]||{label:'Custom'}).label)}</td><td class="mono">${h.ok}/${h.n}</td><td class="mono">${h.mae!=null?h.mae.toFixed(2):'—'}</td></tr>`).join('')}</tbody></table></div>
+   <div><button class="btn" data-wipe="1">Clear progress</button> <span id="wipeask"></span></div>
+  </section>`;
+}
+};
+
+/* ---------- events ---------- */
+let presetBackup=null;
+function beginMatch(mode){
+  if(presetBackup){Object.assign(S,presetBackup);presetBackup=null}
+  if(mode!=='custom'&&PRESETS[mode]){presetBackup=JSON.parse(JSON.stringify(S));Object.assign(S,PRESETS[mode].set);if(PRESETS[mode].types)S.qTypes=Object.assign({},PRESETS[mode].types)}
+  newMatch();G.mode=mode;view='match';render.page();
+}
+function restoreSettings(){if(presetBackup){Object.assign(S,presetBackup);presetBackup=null}}
+app.addEventListener('click',e=>{
+  const b=e.target.closest('button,[data-view]');if(!b)return;const d=b.dataset;
+  if(d.view){if(view==='match'){pause();restoreSettings()}clearInterval(qTimer);view=d.view;render.page();return}
+  if(d.preset){beginMatch(d.preset);return}
+  if(d.quiz){restoreSettings();view='quiz';startQuiz();render.page();return}
+  if(d.go==='custom'){beginMatch('custom');return}
+  if(d.go==='again'){const m=G.mode||'custom';restoreSettings();beginMatch(m);return}
+  if(d.go==='home'){restoreSettings();view='home';render.page();return}
+  if(d.start){start();return}
+  if(d.pause){pause();return}
+  if(d.ask){ask();return}
+  if(d.mem){S.memory=!S.memory;saveS();['#opfeed','#histlbl'].forEach(q=>{const el=$(q);if(el)el.hidden=S.memory});render.controls();render.feed();return}
+  if(d.peek){S.showOppElixir=!S.showOppElixir;saveS();const el=$('#oppelix');if(el)el.hidden=!S.showOppElixir;render.controls();render.hud();return}
+  if(d.end){finish();restoreSettings();return}
+  if(d.quizend){quizDone();return}
+  if(d.set){let v=d.val;if(!isNaN(+v)&&v!=='')v=+v;S[d.set]=v;saveS();render.page();return}
+  if(d.pickdeck){render.page();render.picker(d.pickdeck);return}
+  if(d.choose){if(d.choose==='opp')S.oppDeck=+d.i;else S.myDeck=+d.i;saveS();render.page();return}
+  if(d.clear){S[d.clear]=-1;saveS();render.page();return}
+  if(d.reset){S=JSON.parse(JSON.stringify(DEFAULTS));saveS();render.page();return}
+  if(d.wipe){const w=$('#wipeask');w.innerHTML='Sure? <button class="btn" data-wipeyes="1">Yes, clear it</button>';return}
+  if(d.wipeyes){store.set('history',[]);render.page();return}
+});
+app.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.pool){const g=t.dataset.pool;S.oppPool=t.checked?[...new Set([...S.oppPool,g])]:S.oppPool.filter(x=>x!==g);saveS();render.page();return}
+  if(t.dataset.ck){if(t.dataset.obj)S[t.dataset.obj][t.dataset.ck]=t.checked;else S[t.dataset.ck]=t.checked;saveS();render.page();return}
+  if(t.dataset.evo){S.evoOverride[t.dataset.evo]=+t.value;saveS();render.page();return}
+});
+ON('keydown',e=>{if(!ACTIVE())return;
+  if(e.key==='Enter'){const n=$('#qnext')||$('#qznext');if(n){e.preventDefault();n.click();return}}
+  if(G.qOpen&&/^[0-9]$/.test(e.key)){const b=ROOT.querySelector(`#qwrap [data-a="${e.key}"]`);if(b&&!b.disabled)b.click()}
+  if(view==='quiz'&&/^[1-4]$/.test(e.key)&&!$('#qznext')){const bs=ROOT.querySelectorAll('#quiz [data-o]');const b=bs[+e.key-1];if(b)b.click()}
+  if(view==='match'&&e.key===' '&&!G.qOpen&&(e.target===document.body||e.target===HOST)){e.preventDefault();G.running?pause():G.over||start()}
+});
+ON('visibilitychange',()=>{if(document.hidden&&G.running)pause()});
+render.page();
+return {pause:()=>{if(G.running)pause()}};
+}
+const LABCSS="[hidden]{display:none!important}\nimg{max-width:100%}\n\n/* Layout: one-column \"war room\" \u2014 clock rail on top, opponent above, play feed in the middle, your hand at the bottom, like the game screen. */\n:host{\n  display:block;\n  --bg:#0e1424; --panel:#172038; --panel2:#1f2b4a; --line:#2c3a60;\n  --fg:#e9eefc; --mute:#93a0c4; --dim:#5d6a90;\n  --elixir:#d23fd6; --elixir2:#8f2cc4; --gold:#f2b632; --good:#3fcf8e; --bad:#ff5d6c; --warn:#ffb648;\n  --troop:#4f7bff; --spell:#ff8a3d; --bldg:#8d97ad; --champ:#f2b632; --evo:#c06bff; --hero:#2fd0c8;\n  --display:'Lilita One','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;\n  --body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;\n  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;\n  color-scheme:dark;\n}\n*{box-sizing:border-box}\n.labroot{background:var(--bg);color:var(--fg);border-radius:16px;font-family:var(--body);font-size:15px;line-height:1.45;padding:12px 12px 20px;\n  background-image:radial-gradient(1200px 500px at 50% -200px,#26315a 0%,transparent 70%)}\n.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}\nh1,h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.3px;margin:0;text-wrap:balance}\nh1{font-size:30px;line-height:1.1}\nh2{font-size:21px}\nh3{font-size:17px}\np{margin:0}\n.mute{color:var(--mute)}\n.small{font-size:13px}\n.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}\nbutton{font:inherit;color:inherit;cursor:pointer}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}\n.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-weight:800}\n.btn:hover{border-color:var(--mute)}\n.btn.pri{background:linear-gradient(180deg,#e351e6,var(--elixir2));border-color:#f07ff3;color:#fff;box-shadow:0 3px 0 #5d1a85}\n.btn.gold{background:linear-gradient(180deg,#ffd36b,#e19b13);color:#2a1a00;border-color:#ffe39f;box-shadow:0 3px 0 #8a5a00}\n.btn:disabled{opacity:.45;cursor:default}\n.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}\n.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}\n.brand{display:flex;align-items:center;gap:10px}\n.drop{width:30px;height:30px;flex:none}\n.tabs{display:flex;gap:6px;flex-wrap:wrap}\n.tab{background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:800;color:var(--mute)}\n.tab[aria-selected=true]{background:var(--panel2);color:var(--fg);border-color:var(--elixir)}\n.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}\n/* mode cards */\n.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}\n.mode{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}\n.mode:hover{border-color:var(--elixir)}\n.mode .k{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--elixir)}\n.mode h3{font-size:19px}\n.mode p{color:var(--mute);font-size:13.5px}\n/* settings */\n.set{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}\n.fld{display:flex;flex-direction:column;gap:5px;min-width:0}\n.fld label,.lbl{font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--mute);font-weight:800}\nselect,input[type=text],input[type=number],input[type=search]{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;width:100%;min-width:0}\ninput[type=range]{width:100%;accent-color:var(--elixir)}\n.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px}\n.chk input{margin-top:3px;accent-color:var(--elixir)}\n.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}\n.seg button{flex:1;background:transparent;border:0;padding:7px 6px;font-weight:800;color:var(--mute);font-size:13px}\n.seg button[aria-pressed=true]{background:var(--panel2);color:var(--fg);box-shadow:inset 0 -2px 0 var(--elixir)}\nfieldset{border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}\nlegend{font-family:var(--display);font-size:16px;padding:0 6px}\n/* cards */\n.card{position:relative;width:64px;flex:none;aspect-ratio:3/4;border-radius:9px;background:linear-gradient(180deg,#2a3760,#1a2342);border:2px solid var(--troop);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 3px 3px;text-align:center;overflow:hidden;user-select:none}\n.card.spell{border-color:var(--spell)} .card.bldg{border-color:var(--bldg)} .card.champ{border-color:var(--champ);background:linear-gradient(180deg,#4a3a12,#241c08)}\n.card.evo{box-shadow:0 0 0 2px var(--evo),0 0 14px -2px var(--evo)} .card.hero{box-shadow:0 0 0 2px var(--hero),0 0 14px -2px var(--hero)}\n.card .ab{font-family:var(--display);font-size:19px;line-height:1;margin-top:6px}\n.card .nm{font-size:9.5px;line-height:1.1;color:var(--mute);margin-top:3px;font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}\n.card .cost{position:absolute;top:2px;left:2px;width:19px;height:22px;display:grid;place-items:center;font-family:var(--display);font-size:13px;color:#fff;\n  background:radial-gradient(circle at 40% 35%,#f48cf5,var(--elixir) 45%,var(--elixir2));clip-path:path('M9.5 0C9.5 0 19 9 19 14A9.5 8 0 0 1 0 14C0 9 9.5 0 9.5 0Z');padding-top:5px}\n.card .tag{position:absolute;bottom:2px;left:2px;right:2px;font-size:8.5px;font-weight:800;letter-spacing:.6px;border-radius:4px;padding:1px 0}\n.card.evo .tag{background:var(--evo);color:#1a0b2a} .card.hero .tag{background:var(--hero);color:#04211f} .card.champ .tag{background:var(--champ);color:#2a1a00}\n.card .pips{position:absolute;top:4px;right:3px;display:flex;flex-direction:column;gap:2px}\n.card .pips i{width:6px;height:6px;border-radius:50%;border:1px solid var(--evo);display:block}\n.card .pips i.on{background:var(--evo)}\n.card.sm{width:46px}.card.sm .ab{font-size:14px;margin-top:5px}.card.sm .nm{display:none}.card.sm .cost{transform:scale(.8);transform-origin:0 0}\n.card.lg{width:96px}.card.lg .ab{font-size:28px}.card.lg .nm{font-size:11px}\nbutton.card{cursor:pointer;color:inherit;font:inherit}\nbutton.card:disabled{filter:grayscale(.8) brightness(.7);cursor:default}\nbutton.card.sel{outline:3px solid var(--gold);outline-offset:1px}\n.cards{display:flex;gap:6px;flex-wrap:wrap}\n/* match */\n.hud{display:flex;flex-direction:column;gap:10px}\n.clockbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px}\n.clock{font-family:var(--mono);font-size:22px;font-weight:700}\n.phase{font-family:var(--display);font-size:16px;padding:2px 10px;border-radius:999px;background:var(--panel2)}\n.phase.x2{background:var(--elixir);color:#fff}.phase.x3{background:var(--gold);color:#2a1a00}\n.side{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}\n.side.opp{border-color:#5b2a3a;background:linear-gradient(180deg,#2a1729,#1b1730)}\n.who{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}\n.who b{font-family:var(--display);font-weight:400;font-size:17px}\n.feed{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;min-height:70px;align-items:flex-end}\n.feed .ev{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none}\n.feed .ev .ts{font-family:var(--mono);font-size:10px;color:var(--dim)}\n.feed .ev.new .card{animation:pop .45s ease-out}\n.feed .ev .abil{font-size:9px;font-weight:800;color:var(--gold)}\n@keyframes pop{0%{transform:translateY(-14px) scale(1.15);opacity:0}100%{transform:none;opacity:1}}\n@media (prefers-reduced-motion:reduce){.feed .ev.new .card{animation:none}}\n.elix{display:flex;align-items:center;gap:8px}\n.ebar{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;height:22px;position:relative}\n.ebar i{border-radius:4px;background:#2b2140;position:relative;overflow:hidden;border:1px solid #3a2b55}\n.ebar i b{position:absolute;inset:0;background:linear-gradient(180deg,#f070f2,var(--elixir2));transform-origin:left;transform:scaleX(0)}\n.enum{font-family:var(--display);font-size:24px;width:34px;text-align:center;color:#f4a0f6}\n.hand{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}\n.nextc{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--mute);font-weight:800}\n.status{display:flex;gap:6px;flex-wrap:wrap}\n.chip{font-size:12px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--mute);background:var(--bg)}\n.chip.p{border-color:var(--elixir);color:#f4a0f6}.chip.g{border-color:var(--gold);color:var(--gold)}.chip.e{border-color:var(--evo);color:#d9a6ff}\n.big{display:flex;align-items:center;gap:14px;min-height:96px;justify-content:center}\n.bigtxt{font-family:var(--display);font-size:18px}\n.ctl{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}\n/* question */\n.qwrap{position:fixed;inset:0;background:rgba(6,9,18,.78);display:grid;place-items:center;z-index:50;padding:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));backdrop-filter:blur(3px)}\n.q{width:min(560px,100%);max-height:calc(100% - 20px);overflow:auto;background:var(--panel);border:2px solid var(--elixir);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px #000a}\n.q .qk{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--elixir)}\n.q h2{font-size:22px}\n.timer{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}\n.timer b{display:block;height:100%;background:var(--gold);transform-origin:left}\n.pad{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}\n.pad button{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 0;font-family:var(--display);font-size:22px}\n.pad button:hover{border-color:var(--elixir)}\n.opts{display:grid;gap:8px}\n.opts button{text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700}\n.opts button:hover{border-color:var(--elixir)}\n.opts button.ok{border-color:var(--good);background:#143a2c}.opts button.no{border-color:var(--bad);background:#3d1520}\n.fb{border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}\n.fb.ok{background:#11352a;border:1px solid var(--good)}.fb.no{background:#3a1520;border:1px solid var(--bad)}\n.fb .v{font-family:var(--display);font-size:20px}\n.why{font-size:13.5px;color:#c9d2ee}\n.why .mono{font-size:12.5px}\n/* summary */\n.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}\n.kpi{background:var(--panel2);border-radius:12px;padding:10px 12px}\n.kpi .n{font-family:var(--display);font-size:28px;line-height:1.1}\n.kpi .l{font-size:12px;color:var(--mute);font-weight:800}\n.chart{overflow-x:auto}\n.chart svg{display:block;width:100%;min-width:520px;height:auto}\ntable{border-collapse:collapse;width:100%;font-size:13.5px}\nth,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}\nth{font-size:11.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mute)}\n.tblw{overflow-x:auto}\n.good{color:var(--good)}.bad{color:var(--bad)}\n.deckpick{display:flex;flex-direction:column;gap:8px}\n.dlist{max-height:300px;overflow:auto;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:6px}\n.ditem{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid transparent;border-radius:8px;padding:6px;text-align:left;min-width:0}\n.ditem[aria-pressed=true]{border-color:var(--gold)}\n.ditem .dt{font-weight:800;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.ditem .cards{flex-wrap:nowrap;gap:3px}\n.ditem .card.sm{width:30px}.ditem .card.sm .ab{font-size:10px;margin-top:6px}\n.note{font-size:12.5px;color:var(--mute);border-left:3px solid var(--line);padding-left:10px}\n.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px}\n/* compact match screen: everything on one phone screen */\n.mtop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}\n.howd{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px}\n.howd summary{cursor:pointer;font-weight:800;color:var(--mute)}\n.howd p{margin-top:6px}\n.clockbar{padding:6px 10px;flex-wrap:wrap}\n.phase{white-space:nowrap}\n.ctl{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}\n.ctl .btn{flex:none;white-space:nowrap}\n.ctl .btn{padding:6px 10px;font-size:13px}\n.ctl .btn[aria-pressed=true]{border-color:var(--elixir);color:#f4a0f6}\n.side{padding:10px;gap:8px}\n.big{min-height:0;justify-content:flex-start;gap:12px}\n.big .card{width:70px}\n.feed{min-height:0}\n.memo{display:grid;place-items:center;width:70px;aspect-ratio:3/4;border:2px dashed var(--line);border-radius:9px;font-family:var(--display);font-size:26px;color:var(--dim)}\n.hud{gap:8px}\n@media (max-width:520px){h1{font-size:25px}.card{width:56px}.card.lg{width:82px}.pad button{font-size:19px;padding:9px 0}}\n\n/* CR Decks app: card pictures from pics/ (and any you added) fill the tile; cost, EVO/HERO tag and evo pips sit on top */\n.card.pic{padding:0;background:#10182e}\n.card.pic>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}\n.card.pic .ab,.card.pic .nm{display:none}\n.card.pic .cost,.card.pic .tag,.card.pic .pips{z-index:1}\n.card.pic .tag{text-shadow:none}\n.qwrap{font-family:var(--body);color:var(--fg);line-height:1.45}\n/* deck lists: on a phone the name goes on its own line above the 8 cards */\n@media (max-width:560px){.deckpick .row input[type=search]{flex:1 1 100%!important}.deckpick .row select{flex:1 1 100%;width:100%!important}.ditem{flex-wrap:wrap}.ditem>div:first-child{flex:1 1 100%!important}.ditem .card.sm{width:34px}}\n";
+</script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
@@ -416,7 +1074,7 @@ function saveEd(){const msg=$("edmsg");
 /* ---------- more ---------- */
 function renderMore(){$("count").textContent="";const nPics=Object.values(UPICS).filter(Boolean).length+BPICS.size;
   $("out").innerHTML=`<div class="page">
-  <section class="card2"><h2>Back up or move everything</h2><p>One file with your added decks, favorites, hidden decks, imported battles and the pictures you added. Open it here on another phone, or after reinstalling.</p>
+  <section class="card2"><h2>Back up or move everything</h2><p>One file with your added decks, favorites, hidden decks, imported battles, the pictures you added and your Elixir Lab progress. Open it here on another phone, or after reinstalling.</p>
     <div class="sbtns"><button class="btn gold grow" type="button" id="bksave">Save backup file</button><label class="btn grow">Restore from file<input type="file" id="bkfile" class="vh" accept=".json,application/json,*/*"></label></div><p class="msg" id="bkmsg"></p></section>
   <section class="card2"><h2>Card pictures</h2><p>${BPICS.size} pictures came with the app. Turn this on, then tap any card in any deck to give it a picture (normal, Evo and Hero forms each get their own).</p>
     <button class="btn${EDIT?" gold":""}" type="button" id="picmode">${EDIT?"Done adding pictures":"Add or change card pictures"}</button></section>
@@ -429,7 +1087,7 @@ async function blobToData(b){return await new Promise(r=>{const fr=new FileReade
 async function saveBackup(){const msg=$("bkmsg");msg.textContent="Preparing…";
   try{const pics={};if(PIDB){const keys=await idbDo(PIDB,"pics","readonly",s=>s.getAllKeys());for(const k of keys){const b=await idbDo(PIDB,"pics","readonly",s=>s.get(k));pics[k]=b?await blobToData(b):null}}
     await loadBattles();
-    const json=JSON.stringify({app:"cr-decks",v:1,at:Date.now(),user:USER,favs:FAVS,hidden:[...HIDDEN],cards:CUSTOM,battles:BSTORE,pics});
+    const json=JSON.stringify({app:"cr-decks",v:1,at:Date.now(),user:USER,favs:FAVS,hidden:[...HIDDEN],cards:CUSTOM,battles:BSTORE,pics,lab:{settings:lsGet("elab-settings",null),history:lsGet("elab-history",null)}});
     const d=new Date(),z=n=>String(n).padStart(2,"0"),name=`cr-decks-backup-${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}.json`;
     if(window.AndroidFile){AndroidFile.save(name,json);msg.textContent="Choose where to save the file…";return}
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([json],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();a.remove();msg.textContent="Backup downloaded."}
@@ -441,6 +1099,7 @@ async function restoreBackup(e){const f=e.target.files[0];e.target.value="";if(!
     if(PENDING!==j.at){PENDING=j.at;msg.textContent=`Backup from ${fmtDate(j.at)}: ${j.user.length} added decks, ${Object.keys(j.favs||{}).length} favorites, ${(j.battles||[]).length} battles. Choose the file again to replace what's on this phone.`;return}
     PENDING=null;USER=j.user||[];FAVS=j.favs||{};HIDDEN=new Set(j.hidden||[]);CUSTOM=j.cards||{};
     lsSet("crd-user",USER);lsSet("crd-favs",FAVS);lsSet("crd-hidden",[...HIDDEN]);lsSet("crd-cards",CUSTOM);for(const [id,v] of Object.entries(CUSTOM))CARDS[id]=v;
+    if(j.lab){if(j.lab.settings)lsSet("elab-settings",j.lab.settings);if(j.lab.history)lsSet("elab-history",j.lab.history);LABH.api=null}
     await loadBattles();if(BIDB){await idbDo(BIDB,"battles","readwrite",s=>s.clear());for(const b of j.battles||[])await idbDo(BIDB,"battles","readwrite",s=>s.put(b))}
     PIDB=PIDB||await idbOpen("crd-pics","pics");await idbDo(PIDB,"pics","readwrite",s=>s.clear());
     for(const [k,u] of Object.entries(j.pics||{})){const b=u?await (await fetch(u)).blob():null;await idbDo(PIDB,"pics","readwrite",s=>s.put(b,k))}
@@ -476,15 +1135,54 @@ function filterSheet(){const specs=uniq(D.flatMap(d=>d.variants.flatMap(v=>v.spe
   $("fclear").onclick=()=>{S={...S,arch:"",spec:"",era:"",tower:"",sec:"all",only:null};closeSheet();syncTop();render()};
   $("sheetBody").querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>{const p=PICKS[+b.dataset.pk][1];const on=b.getAttribute("aria-pressed")==="true";["farch","fspec","ftower"].forEach(id=>$(id).value="");if(!on){if(p.arch)$("farch").value=p.arch;if(p.spec)$("fspec").value=p.spec;if(p.tower)$("ftower").value=p.tower}apply();S.only=null;closeSheet();syncTop();render();scrollTo(0,0)})}
 
+
+/* ---------- Elixir Lab tab ---------- */
+// Lab decks are built from this app's decks (data.js plus the ones you added, minus hidden ones). Each version (tab) of a deck
+// becomes one Lab deck. Groups: meta = RoyaleAPI/RoyaleTracker/Asaf lists, faced = opponents' decks, mine = decks you play or
+// added, liked = your liked lists and your favorites.
+const LABH={on:[],api:null,sig:""};
+function labRAW(){
+  const cards={};for(const [id,v] of Object.entries(CARDS))if(v&&v[0]&&!(v[0] in cards))cards[v[0]]=[Number(id),v[1]];
+  const decks=[];
+  for(const d of D){if(HIDDEN.has(d.key))continue;const seen=new Set();
+    d.variants.forEach((v,vi)=>{const order=(v.order&&v.order.length===8?v.order:d.ids).map(x=>normId(Number(x)));const r={};
+      for(const [id,ro] of Object.entries(v.roles||{}))if(ro)r[cname(normId(Number(id)))]=ro;
+      const sg=JSON.stringify(Object.entries(r).sort());if(seen.has(sg))return;seen.add(sg);
+      const src=v.srcs||[],g=new Set();
+      if(src.some(x=>/^Opponent's deck/.test(x)))g.add("faced");
+      if(src.some(x=>/liked/i.test(x))||isFav(d.key))g.add("liked");
+      if(src.some(x=>/^(RoyaleAPI|RoyaleTracker|Asaf|Your old 'Current meta')/.test(x)))g.add("meta");
+      if(d.mine||d.tier||d.userAdd||v.user||src.some(x=>/^(Your (?!'Decks I liked')|Removed from your game|Added by you)/.test(x)))g.add("mine");
+      if(!g.size)g.add("meta");
+      const multi=d.variants.length>1&&v.specials&&v.specials.length;
+      decks.push({t:d.title+(multi&&vi>0?" · "+v.specials.join(" + "):""),g:[...g],a:d.arch||[],c:order.map(cname),r,tw:v.tower||"Tower Princess",m:d.mine||null,tier:d.tier||null,k:d.key+"#"+sg})})}
+  return {cards,decks,champ:[...CHAMPS]};
+}
+function labPic(n,role){const id=LABH.ids[n];if(id==null)return null;return picFor(normId(id),role==="evo"||role==="hero"?role:"base")}
+function labSig(){return [D.length,HIDDEN.size,Object.keys(FAVS).length,USER.length,Object.keys(UPICS).length].join("/")}
+function mountLab(){
+  const host=$("labhost");
+  for(const [t,f] of LABH.on)document.removeEventListener(t,f);LABH.on=[];
+  const root=host.shadowRoot||host.attachShadow({mode:"open"});
+  root.innerHTML=`<style>${LABCSS}</style><div class="labroot"><div class="wrap" id="app"></div></div>`;
+  const raw=labRAW();LABH.ids={};for(const [n,[id]] of Object.entries(raw.cards))LABH.ids[n]=id;
+  LABH.api=ELAB_START(root,host,raw,labPic,()=>VIEW==="lab",(t,f)=>{document.addEventListener(t,f);LABH.on.push([t,f])});
+  LABH.sig=labSig();
+}
+function renderLab(){$("count").textContent="";
+  // rebuild only when your decks, favorites or pictures changed, and never in the middle of a match
+  const inMatch=LABH.api&&$("labhost").shadowRoot&&$("labhost").shadowRoot.querySelector(".clockbar");
+  if(!LABH.api||(LABH.sig!==labSig()&&!inMatch))mountLab()}
+
 /* ---------- view switching ---------- */
-const TITLES={lib:"My decks",fav:"Favorites",bat:"Battles",add:"Add a deck",more:"More"};
+const TITLES={lib:"My decks",fav:"Favorites",bat:"Battles",add:"Add a deck",lab:"Elixir Lab",more:"More"};
 function syncTop(){const lib=VIEW==="lib";$("ttl").textContent=TITLES[VIEW];$("srow").hidden=!(lib||VIEW==="fav"||VIEW==="bat");$("fbtn").hidden=!lib;$("secchips").hidden=!lib;
   $("q").placeholder=VIEW==="bat"?"Search a card":"Search a card or deck";
   const n=!!S.arch+!!S.spec+!!S.era+!!S.tower;$("fbadge").hidden=!n;$("fbadge").textContent=n;
   $("secchips").innerHTML=SECS.map(([k,l])=>`<button class="chip" type="button" data-sec="${k}" aria-pressed="${S.sec===k}">${l}</button>`).join("");
   document.querySelectorAll(".nav [data-v]").forEach(b=>{if(b.dataset.v===VIEW)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")})}
-function setView(v){VIEW=v;syncTop();render();scrollTo(0,0)}
-function render(){if(VIEW==="lib")renderLib();else if(VIEW==="fav")renderFav();else if(VIEW==="bat")renderBat();else if(VIEW==="add")renderAdd();else renderMore()}
+function setView(v){if(VIEW==="lab"&&v!=="lab"&&LABH.api)LABH.api.pause();VIEW=v;const lab=v==="lab";$("labhost").hidden=!lab;$("out").hidden=lab;document.querySelector("header.top").hidden=lab;syncTop();render();scrollTo(0,0)}
+function render(){if(VIEW==="lab")return renderLab();if(VIEW==="lib")renderLib();else if(VIEW==="fav")renderFav();else if(VIEW==="bat")renderBat();else if(VIEW==="add")renderAdd();else renderMore()}
 document.querySelector(".nav").onclick=e=>{const b=e.target.closest("[data-v]");if(!b)return;if(b.dataset.v==="add"&&VIEW!=="add")ED=null;if(b.dataset.v==="lib")S.only=null;setView(b.dataset.v)};
 $("secchips").onclick=e=>{const b=e.target.closest("[data-sec]");if(!b)return;S.sec=b.dataset.sec;S.only=null;syncTop();render();scrollTo(0,0)};
 $("fbtn").onclick=filterSheet;
