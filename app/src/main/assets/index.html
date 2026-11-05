@@ -32,6 +32,16 @@ h1{margin:0;font-size:1.25rem;font-weight:900;letter-spacing:.01em;color:var(--g
 .chip{flex:none;border:1px solid var(--line);background:var(--bg2);border-radius:999px;padding:6px 12px;font-weight:800;font-size:.82rem;white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--gold);color:#352500;border-color:var(--gold)}
 main{padding:10px 10px calc(var(--nav) + var(--safe-b) + 20px)}
+/* card gallery */
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:0 2px}
+.grow2{background:var(--panel,#1b2a52);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.gname{font-weight:800;display:flex;justify-content:space-between;gap:6px;font-size:.9rem}.gcost{color:var(--elixir,#d23cc9);font-weight:900}
+.gforms{display:flex;gap:8px}
+.gtile{position:relative;width:54px;aspect-ratio:3/4;border-radius:9px;border:2px solid var(--troop,#3f78d6);background:rgba(255,255,255,.04);padding:0;overflow:hidden;color:inherit;font:inherit}
+.gtile.evo{border-color:var(--evo)}.gtile.hero{border-color:var(--hero)}.gtile.empty{border-style:dashed;opacity:.8}
+.gtile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gtile .plus{position:absolute;inset:0;display:grid;place-items:center;font-size:1.5rem;color:var(--muted)}
+.gtile .gl{position:absolute;left:0;right:0;bottom:0;font-size:.6rem;font-weight:800;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 0}
 #labhost{display:block;padding:8px 6px calc(var(--nav) + var(--safe-b) + 16px)}
 .sec{margin:16px 4px 6px;font-weight:900;font-size:1.02rem;color:var(--gold)}
 .secn{margin:0 4px 8px;color:var(--muted);font-size:.8rem}
@@ -178,7 +188,7 @@ const DEFAULTS={
   oppPool:['meta','faced'], oppDeck:-1, myDeck:-1, youPlay:true, autoMe:false,
   speed:1, startElixir:5, startAt:0, overtime:'off', style:'mixed', react:true,
   qEvery:'plays', qPlays:3, qSecs:15, timer:10, tol:0,
-  qTypes:{elixir:true,diff:true,hand:true,cycle:true,evo:true},
+  qTypes:{elixir:true,diff:true,hand:true,cycle:true,evo:true,inhand:true,ago:true,next:true},
   showLog:true, memory:false, revealDeck:true, showOppName:false, showOppElixir:false, showClock:true, showPhase:true, showPump:true,
   evoStartCharged:false, pumpLife:'random', abilities:true,
   quizN:15, quizTimer:15, quizTypes:{cost:true,ability:true,trade:true,counter:true,placement:true,deck:true,math:true,evo:true},
@@ -189,18 +199,23 @@ S.qTypes=Object.assign({},DEFAULTS.qTypes,S.qTypes||{});S.quizTypes=Object.assig
 const saveS=()=>{S.myDeckK=S.myDeck>=0&&DECKS[S.myDeck]?DECKS[S.myDeck].k:null;S.oppDeckK=S.oppDeck>=0&&DECKS[S.oppDeck]?DECKS[S.oppDeck].k:null;store.set('settings',S)};
 const evoCycles=n=>S.evoOverride[n]!=null?S.evoOverride[n]:(EVO_KNOWN[n]??2);
 const PRESETS={
-  full:{label:'Full match',sub:'You play, they play. Questions every few plays.',set:{youPlay:true,autoMe:false,speed:1,qEvery:'plays',qPlays:3,timer:10}},
-  rapid:{label:'Rapid count',sub:'A full match that asks after every card they play: who is up, and what they have. 10 seconds per answer.',set:{youPlay:true,autoMe:false,speed:1,qEvery:'plays',qPlays:1,timer:10},types:{elixir:true,diff:true,hand:false,cycle:false,evo:false}},
-  cycle:{label:'Cycle tracker',sub:'Track their 8-card rotation: what is in hand, when a card comes back.',set:{youPlay:false,speed:1,qEvery:'plays',qPlays:2,timer:12},types:{elixir:false,diff:false,hand:true,cycle:true,evo:true}},
-  double:{label:'Double elixir sprint',sub:'Start at 2:00 in 2× elixir. One minute of fast math.',set:{youPlay:true,speed:1,startAt:120,qEvery:'plays',qPlays:2,timer:6},types:{elixir:true,diff:true,hand:false,cycle:false,evo:false}},
+  elixir:{label:'Elixir mastery',sub:'Both sides play realistic trades for you. Keep the “up / down” count and read their elixir off your bar. Asked at random moments.',
+    set:{youPlay:true,autoMe:true,speed:1,qEvery:'time',qSecs:12,timer:10,revealDeck:true,memory:false},types:{elixir:true,diff:true,hand:false,cycle:false,evo:false,inhand:false,ago:false,next:false}},
+  cycle:{label:'Cycle mastery',sub:'Their deck is hidden until they play it. Each card flashes, then you hold the rotation in your head: what is in hand, what comes back next.',
+    set:{youPlay:true,autoMe:true,speed:1,qEvery:'plays',qPlays:2,timer:12,revealDeck:false,memory:true},types:{elixir:false,diff:false,hand:true,cycle:true,evo:true,inhand:true,ago:true,next:true}},
+  full:{label:'Full match',sub:'You play your own hand, abilities included. They push, defend and punish. Questions on everything.',
+    set:{youPlay:true,autoMe:false,speed:1,qEvery:'time',qSecs:15,timer:10},types:{elixir:true,diff:true,hand:true,cycle:true,evo:true,inhand:true,ago:false,next:true}},
+  double:{label:'Double elixir sprint',sub:'Starts at 2:00 in 2× elixir. Trades come twice as fast; the count works the same.',
+    set:{youPlay:true,autoMe:true,speed:1,startAt:120,qEvery:'time',qSecs:8,timer:8},types:{elixir:true,diff:true,hand:false,cycle:false,evo:false,inhand:false,ago:false,next:false}},
 };
+const LEGACY={rapid:'Rapid count',custom:'Custom'};
 /* ---------- decks ---------- */
 const DECKS=RAW.decks.map((d,i)=>Object.assign({i},d));
 if(!DECKS.length)DECKS.push({i:0,t:'No decks',g:['mine','meta'],a:[],c:['Knight','Archers','Goblins','Giant','Fireball','Zap','Musketeer','Valkyrie'],r:{},tw:'Tower Princess',m:null,tier:null,k:'none'});
 const GROUPS={meta:'Meta: top players and popular',faced:'Faced at your level',mine:'Your decks',liked:'Decks you liked'};
 const myDefault=()=>{const m=DECKS.find(d=>d.tier==='main'&&d.c.includes('Monk'))||DECKS.find(d=>d.tier==='main');return m?m.i:(DECKS.find(d=>d.g.includes('mine'))||DECKS[0]).i};
 {const fi=k=>k?DECKS.findIndex(d=>d.k===k):-1;S.myDeck=fi(S.myDeckK);S.oppDeck=fi(S.oppDeckK);}
-function poolDecks(){const p=S.oppPool.length?S.oppPool:['meta'];return DECKS.filter(d=>d.g.some(g=>p.includes(g)))}
+function poolDecks(){const p=S.oppPool.length?S.oppPool:['meta'];const L=DECKS.filter(d=>d.g.some(g=>p.includes(g)));return L.length?L:DECKS}
 
 /* ---------- card tile ---------- */
 function cardHTML(n,o={}){
@@ -218,11 +233,11 @@ const dropSVG=`<svg class="drop" viewBox="0 0 30 30" aria-hidden="true"><defs><r
 /* ---------- simulation ---------- */
 function rateAt(t){ if(t<120)return 1/2.8; if(t<180)return 2/2.8; if(t<240)return 2/2.8; return 3/2.8 }
 function phaseAt(t){return t<120?1:t<240?2:3}
-function endTime(){return S.overtime==='off'?180:S.overtime==='on'?300:(Math.random()<.5?180:300)}
+function endTime(){let e=S.overtime==='off'?180:S.overtime==='on'?300:(Math.random()<.5?180:300);if(S.startAt>=e-30)e=Math.min(300,Math.max(e,S.startAt+60));if(S.startAt>=180)e=300;return e}
 
 function makePlayer(deck,name){
   const order=shuffle(deck.c);
-  const p={name,deck,roles:deck.r||{},elixir:S.startElixir,hand:order.slice(0,4),queue:order.slice(4),leaked:0,plays:[],pumps:[],evo:{},out:{},seen:new Set(),abilityTimers:[],lastCard:null};
+  const p={name,deck,roles:deck.r||{},elixir:S.startElixir,hand:order.slice(0,4),queue:order.slice(4),leaked:0,plays:[],pumps:[],evo:{},out:{},seen:new Set(),abilityTimers:[],lastCard:null,leakRun:0,ready:[],react:null,pushT:0};
   for(const n of deck.c)if(p.roles[n]==='evo')p.evo[n]=S.evoStartCharged?evoCycles(n):0;
   return p;
 }
@@ -236,7 +251,7 @@ function newMatch(){
   const md=DECKS[S.myDeck>=0?S.myDeck:myDefault()];
   Object.assign(G,{t:S.startAt,end:endTime(),running:false,over:false,events:[],questions:[],samples:[],
     me:makePlayer(md,'You'),op:makePlayer(od,'Opponent'),nextOp:S.startAt+rnd(1.5,4),nextMe:S.startAt+rnd(1,3),
-    style:S.style==='mixed'?pick(['patient','aggressive','cycle']):S.style,sinceQ:0,nextQAt:S.startAt+S.qSecs,lastFrame:0,qOpen:false,sel:null,stats:{}});
+    style:S.style==='mixed'?pick(['patient','aggressive','cycle']):S.style,sinceQ:0,lastBig:null,memHide:false,nextQAt:S.startAt+S.qSecs,lastFrame:0,qOpen:false,sel:null,stats:{}});
   G.op.elixir=S.startElixir;G.me.elixir=S.startElixir;
   if(S.revealDeck)for(const n of od.c)G.op.seen.add(n);
 }
@@ -246,7 +261,8 @@ function tickPlayer(p,dt){
     pm.timer+=dt; while(pm.timer>=PUMP.rate&&pm.made<PUMP.max&&pm.age<pm.life){pm.timer-=PUMP.rate;pm.made++;e+=1;logPump(p,pm)}
     pm.age+=dt; if(pm.age>=pm.life||pm.made>=PUMP.max){pm.alive=false}
   }
-  if(e>10){p.leaked+=e-10;e=10}
+  if(e>10){p.leaked+=e-10;p.leakRun+=e-10;e=10}
+  else if(p.leakRun>0){if(p.leakRun>=0.3)G.events.push({t:G.t,who:p===G.op?'op':'me',leak:p.leakRun});p.leakRun=0}
   p.elixir=e;
 }
 function logPump(p,pm){G.events.push({t:G.t,who:p===G.op?'op':'me',pump:1,elixirAfter:Math.min(10,p.elixir+1)})}
@@ -266,9 +282,12 @@ function doPlay(p,n,opts={}){
   if(n==='Elixir Collector'){const life=S.pumpLife==='full'?PUMP.life:rnd(25,PUMP.life);p.pumps.push({t:G.t,timer:0,made:0,age:0,life,alive:true})}
   if(S.abilities){
     const ab=role==='hero'?HERO_AB[n]:CHAMP.has(n)?CHAMP_AB[n]:null;
-    if(ab&&p===G.op){p.abilityTimers.push({at:G.t+rnd(2,7),card:n,cost:ab,uses:CHAMP.has(n)?(Math.random()<.35?2:1):1,prob:.75})}
+    const aiSide=p===G.op||S.autoMe||!S.youPlay;
+    if(ab&&aiSide){p.abilityTimers.push({at:G.t+rnd(2,7),card:n,cost:ab,uses:CHAMP.has(n)?(Math.random()<.35?2:1):1,prob:.75})}
+    else if(ab){p.ready.push({card:n,cost:ab,until:CHAMP.has(n)?null:G.t+10,champ:CHAMP.has(n)})}
   }
   if(p===G.op){G.sinceQ++}
+  aiOnPlay(p,n);
   return ev;
 }
 function champsReturn(p){for(const n in p.out){if(G.t>=p.out[n]){delete p.out[n];p.queue.push(n);if(p.hand.length<4&&p.queue.length)p.hand.push(p.queue.shift())}}}
@@ -281,31 +300,55 @@ function useAbilities(p){
     else a.at=G.t+1.5;
   }
 }
-function aiChoose(p,style,reactive){
-  const aff=p.hand.filter(n=>canAfford(p,n)&&n!=='Mirror'||(n==='Mirror'&&canAfford(p,n)));
-  if(!aff.length)return null;
-  const w=aff.map(n=>{let s=1;const c=playCost(p,n);
-    if(WINCON.includes(n))s*=p.elixir>=8||reactive?1.6:.9;
-    if(style==='cycle'&&c<=2)s*=2.2;
-    if(n==='Elixir Collector')s*=p.elixir>=8?1.4:.4;
-    if(reactive&&SPELLS.has(n))s*=1.3;
-    if(p.roles[n]==='evo'&&p.evo[n]>=evoCycles(n))s*=1.5;
-    return s});
-  let r=Math.random()*w.reduce((a,b)=>a+b,0);for(let k=0;k<aff.length;k++){r-=w[k];if(r<=0)return aff[k]}return aff[0];
+/* Realistic play model: pushes built around the win condition, defence priced to the threat, cycling at full elixir. */
+const isThreat=n=>!SPELLS.has(n)||n==='Goblin Barrel'||n==='Graveyard';
+function otherOf(p){return p===G.op?G.me:G.op}
+function aiControlled(p){return p===G.op||!S.youPlay||S.autoMe}
+function aiOnPlay(p,n){
+  // the other side answers a threat with a card priced close to it
+  const o=otherOf(p);if(!aiControlled(o))return;
+  if(p===G.me&&!S.react&&o===G.op)return;
+  if(!isThreat(n))return;
+  if(Math.random()<.85)o.react={by:G.t+rnd(.7,2.2),limit:cost(n)+1,target:Math.max(1,cost(n)-rnd(0,1.6)),giveUp:G.t+5};
 }
-function aiThreshold(style){return style==='patient'?rnd(6.5,10.6):style==='aggressive'?rnd(3,6):rnd(2,5)}
+function pickBy(p,list,score){let best=null,bs=-1e9;for(const n of list){const v=score(n)+Math.random()*.6;if(v>bs){bs=v;best=n}}return best}
+function affordable(p){return p.hand.filter(n=>canAfford(p,n)&&playCost(p,n)<99)}
 function aiStep(p,isOpp){
+  if(!aiControlled(p))return;
   const key=isOpp?'nextOp':'nextMe';
   if(G.t<G[key])return;
-  const th=p._th??(p._th=aiThreshold(isOpp?G.style:'mixed'));
-  const lowest=Math.min(...p.hand.map(n=>playCost(p,n)));
-  if(p.elixir+1e-9>=Math.max(th,lowest)||(p.elixir>=10&&Math.random()<.5)){
-    const n=aiChoose(p,isOpp?G.style:'mixed',false);
-    if(n){doPlay(p,n);p._th=null;G[key]=G.t+rnd(1.2,isOpp&&G.style==='patient'?6:4);afterPlay(isOpp?'op':'me');return}
+  const dbl=rateAt(G.t)>1/2.8+1e-9;const style=isOpp?G.style:'mixed';
+  const aff=affordable(p);
+  // 1. defend a threat on the board
+  if(p.react){
+    if(G.t>=p.react.by){
+      const c=aff.filter(n=>n!=='Elixir Collector'&&playCost(p,n)<=p.react.limit);
+      if(c.length){const n=pickBy(p,c,x=>-Math.abs(playCost(p,x)-p.react.target)-(WINCON.includes(x)?2:0));p.react=null;doPlay(p,n);G[key]=G.t+rnd(.8,2);afterPlay(isOpp?'op':'me');
+        if(Math.random()<.35)p.pushT=G.t+rnd(1.5,4); return}
+      if(G.t>p.react.giveUp)p.react=null;
+    }
+    G[key]=G.t+.3;return;
   }
-  G[key]=G.t+rnd(.4,1.2);
+  // 2. support a push already under way
+  if(p.supportBy&&G.t>=p.supportBy){p.supportBy=0;
+    const c=aff.filter(n=>!WINCON.includes(n)&&n!=='Elixir Collector');
+    if(c.length&&Math.random()<.75){const n=pick(c);doPlay(p,n);G[key]=G.t+rnd(1,2.5);afterPlay(isOpp?'op':'me');return}}
+  // 3. push with the win condition
+  const th=p._th??(p._th=style==='patient'?rnd(8,10.4):style==='aggressive'?rnd(5,7.5):rnd(6.5,9.5))-(dbl?1.5:0);
+  const wc=aff.filter(n=>WINCON.includes(n));
+  if(wc.length&&(p.elixir>=th||(p.pushT&&G.t>=p.pushT&&p.elixir>=cost(wc[0])+1))){
+    const n=pick(wc);p.pushT=0;p._th=null;doPlay(p,n);if(Math.random()<.6)p.supportBy=G.t+rnd(.8,2.5);G[key]=G.t+rnd(1,2.5);afterPlay(isOpp?'op':'me');return}
+  // 4. pump when rich, or cycle at full elixir instead of leaking
+  if(p.elixir>=9.3){
+    const pm=aff.find(n=>n==='Elixir Collector');
+    if(pm&&Math.random()<.5){doPlay(p,pm);G[key]=G.t+rnd(1,2);afterPlay(isOpp?'op':'me');return}
+    if(Math.random()<(style==='patient'?.35:.7)){const n=pickBy(p,aff.filter(x=>!WINCON.includes(x)||aff.length<2),x=>-playCost(p,x));if(n){doPlay(p,n);G[key]=G.t+rnd(1,2.5);afterPlay(isOpp?'op':'me');return}}
+  }
+  // 5. occasional cheap cycle play mid-elixir
+  if(style==='cycle'&&p.elixir>=5&&Math.random()<.15){const n=pickBy(p,aff.filter(x=>!WINCON.includes(x)),x=>-playCost(p,x));if(n&&playCost(p,n)<=2){doPlay(p,n);G[key]=G.t+rnd(1.5,3);afterPlay(isOpp?'op':'me');return}}
+  G[key]=G.t+rnd(.3,.8);
 }
-function reactTo(){ if(!S.react)return; if(Math.random()<.6)G.nextOp=Math.min(G.nextOp,G.t+rnd(.8,2.4)), G.op._th=Math.min(G.op._th??10,rnd(2,5)) }
+function reactTo(){}
 function afterPlay(who){
   render.feed();
   if(who==='me')reactTo();
@@ -318,10 +361,10 @@ function loop(ts){
   if(!G.qOpen){
     const steps=Math.ceil(dt/.05);const h=dt/steps;
     for(let k=0;k<steps;k++){
-      G.t+=h;tickPlayer(G.op,h);tickPlayer(G.me,h);champsReturn(G.op);champsReturn(G.me);useAbilities(G.op);
+      G.t+=h;tickPlayer(G.op,h);tickPlayer(G.me,h);champsReturn(G.op);champsReturn(G.me);useAbilities(G.op);if(aiControlled(G.me))useAbilities(G.me);G.me.ready=G.me.ready.filter(a=>a.champ?(a.card in G.me.out):G.t<a.until);
       if(Math.floor(G.t*2)!==Math.floor((G.t-h)*2))G.samples.push({t:G.t,op:G.op.elixir,me:G.me.elixir});
       aiStep(G.op,true);
-      if(!S.youPlay||S.autoMe)aiStep(G.me,false);
+      aiStep(G.me,false);
       if(S.qEvery==='time'&&G.t>=G.nextQAt){G.nextQAt=G.t+S.qSecs*rnd(.7,1.3);ask();break}
       if(G.t>=G.end){finish();return}
       if(G.qOpen)break;
@@ -340,6 +383,7 @@ function ledger(){
   for(const e of G.events){
     if(e.card){const d=e.who==='op'?-e.cost:e.cost;lead+=d;rows.push({e,lead})}
     else if(e.pump){const d=e.who==='op'?1:-1;lead+=d;rows.push({e,lead})}
+    else if(e.leak){const d=e.who==='op'?-e.leak:e.leak;lead+=d;rows.push({e,lead})}
   }
   return {lead,rows};
 }
@@ -352,10 +396,10 @@ function explainElixir(p){
   }
   const {rows}=ledger();
   const recent=rows.slice(-5).map(r=>{const e=r.e;const who=e.who==='op'?'They':'You';
-    const what=e.pump?`${e.who==='op'?'Their':'Your'} pump +1`:`${who} played ${esc(e.card)}${e.ability?' ability':''} (${e.cost})`;
+    const what=e.pump?`${e.who==='op'?'Their':'Your'} pump +1`:e.leak?`${who} sat at 10 and wasted ${e.leak.toFixed(1)}`:`${who} played ${esc(e.card)}${e.ability?' ability':''} (${e.cost})`;
     return `<li>${what} → <b>${leadTxt(r.lead)}</b></li>`}).join('');
   // leaks shift the balance too
-  const leakNote=(op.leaked>0.5||me.leaked>0.5)?`<br>Leaks: ${me.leaked>0.5?`you wasted ${me.leaked.toFixed(1)} at 10 (that counts in their favour)`:''}${me.leaked>0.5&&op.leaked>0.5?', ':''}${op.leaked>0.5?`they wasted ${op.leaked.toFixed(1)}`:''}.`:'';
+  const leakNote=(me.leakRun>0.3||op.leakRun>0.3)?'<br>Someone is sitting at 10 right now, leaking.':'';
   const realLead=op.elixir-me.elixir;
   return `<ul style="margin:4px 0 6px;padding-left:18px">${recent}</ul>Your bar shows <b>${Math.floor(me.elixir)}</b>; ${leadTxt(realLead)}, so they have <b>${Math.floor(op.elixir+1e-9)}</b>.${leakNote}${op.elixir>=9.99?'<br>They are sitting at 10 and leaking.':''}`;
 }
@@ -370,8 +414,21 @@ function buildQ(depth=0){
   if(types.includes('cycle')&&playedCount>=1)can.push('cycle');
   const evoCards=Object.keys(op.evo).filter(n=>op.seen.has(n));
   if(types.includes('evo')&&evoCards.length)can.push('evo');
+  const seen=[...op.seen].filter(n=>op.deck.c.includes(n));
+  if(types.includes('inhand')&&playedCount>=3&&seen.length>=3)can.push('inhand','inhand');
+  if(types.includes('ago')&&playedCount>=4)can.push('ago');
+  if(types.includes('next')&&playedCount>=5&&op.queue.length&&op.plays.filter(e=>!e.ability).slice(-4).some(e=>e.card===op.queue[0]))can.push('next');
   if(!can.length)return null;
   const k=pick(can);
+  const plays=op.plays.filter(e=>!e.ability);
+  if(k==='inhand'){const n=pick(seen.filter(x=>!CHAMP.has(x)||!(x in op.out)));const yes=op.hand.includes(n);
+    return {k,label:'Card tracking',prompt:`Is <b>${esc(n)}</b> in their hand right now?`,kind:'mc',opts:['Yes','No'],answer:yes?'Yes':'No',why:()=>{const i=plays.map(e=>e.card).lastIndexOf(n);const since=i<0?null:plays.length-1-i;
+      return i<0?`They haven't played ${esc(n)} yet${op.hand.includes(n)?', and it is in their hand':', and it is still in their queue'}.`:`They last played ${esc(n)} ${since===0?'just now':since+' play'+(since>1?'s':'')+' ago'}. A card comes back to hand 4 plays after it's used${since>=4?', so it is back':', so it is not back yet'}.`}}}
+  if(k==='ago'){const back=pick([2,3,4].filter(b=>b<=plays.length));const n=plays[plays.length-back].card;
+    const opts=shuffle([n,...shuffle([...new Set(plays.map(e=>e.card))].filter(x=>x!==n)).slice(0,3)]);
+    return {k,label:'Rotation memory',prompt:`Which card did they play ${back} plays ago? (the last one counts as 1)`,kind:'mc',opts,answer:n,why:()=>`Their last ${back} plays, newest first: ${plays.slice(-back).reverse().map(e=>'<b>'+esc(e.card)+'</b>').join(', ')}.`}}
+  if(k==='next'){const last4=plays.slice(-4).map(e=>e.card);const n=op.queue[0];
+    return {k,label:'Next card back',prompt:'Which of their recent cards comes back to their hand next?',kind:'mc',opts:shuffle([...new Set(last4)]),answer:n,why:()=>`Cards return in the order they were played. Of their last four (${last4.map(esc).join(', ')}), the oldest is <b>${esc(n)}</b>, so it is next.`}}
   if(k==='elixir'){const v=Math.floor(op.elixir+1e-9);return {k,label:'Opponent elixir',prompt:'How much elixir does your opponent have right now?',kind:'pad',answer:v,why:()=>explainElixir(op),exact:op.elixir}}
   if(k==='diff'){const v=Math.floor(G.me.elixir+1e-9)-Math.floor(op.elixir+1e-9);
     return {k,label:'Elixir lead',prompt:'Who is up on elixir, and by how much?',kind:'diff',answer:v,why:()=>explainElixir(op)}}
@@ -398,6 +455,7 @@ function answer(q,given){
   let ok,err=0;
   if(q.kind==='pad'||q.kind==='diff'){ok=given!=null&&Math.abs(given-q.answer)<=S.tol;err=given==null?null:Math.abs(given-q.answer)}
   else if(q.kind==='multi'){const a=new Set(q.answer);ok=given&&given.length===4&&given.every(n=>a.has(n));}
+  else if(q.kind==='mc'){ok=given===q.answer}
   q.given=given;q.ok=ok;q.err=err;q.ms=performance.now()-q.started;
   G.questions.push(q);
   render.feedback(q);
@@ -494,7 +552,7 @@ let view='home';
 const $=s=>ROOT.querySelector(s);
 const R_ALL=s=>ROOT.querySelectorAll(s);
 const app=ROOT.getElementById('app');
-const QLABEL={elixir:'Opponent elixir',diff:'Elixir lead',hand:'Card tracking',cycle:'Cycle',evo:'Evolution watch',cost:'Card cost',ability:'Ability cost',trade:'Elixir trade',counter:'Counter',placement:'Placement',deck:'Deck reading',math:'Rules and timing'};
+const QLABEL={inhand:'In their hand?',ago:'Rotation memory',next:'Next card back',elixir:'Opponent elixir',diff:'Elixir lead',hand:'Card tracking',cycle:'Cycle',evo:'Evolution watch',cost:'Card cost',ability:'Ability cost',trade:'Elixir trade',counter:'Counter',placement:'Placement',deck:'Deck reading',math:'Rules and timing'};
 const render={
 page(){
   const nav=`<div class="top"><div class="brand">${dropSVG}<div><h1>Elixir Lab</h1><p class="mute small">Count their elixir, track their cycle, call their evo.</p></div></div>
@@ -557,7 +615,7 @@ settings(){
     ${S.qEvery==='plays'?`<div class="fld"><span class="lbl">N = ${S.qPlays}</span>${segs('qPlays',[[1,'1'],[2,'2'],[3,'3'],[4,'4'],[6,'6']])}</div>`:`<div class="fld"><span class="lbl">About every</span>${segs('qSecs',[[8,'8 s'],[15,'15 s'],[25,'25 s'],[40,'40 s']])}</div>`}
     <div class="fld"><span class="lbl">Time to answer</span>${segs('timer',[[0,'None'],[3,'3 s'],[5,'5 s'],[10,'10 s'],[20,'20 s']])}</div>
     <div class="fld"><span class="lbl">Elixir tolerance</span>${segs('tol',[[0,'Exact'],[1,'±1']])}</div>
-    <div class="fld"><span class="lbl">Question types</span>${['elixir','diff','hand','cycle','evo'].map(k=>ck(k,QLABEL[k],'qTypes')).join('')}</div>
+    <div class="fld"><span class="lbl">Question types</span>${['elixir','diff','hand','cycle','evo','inhand','ago','next'].map(k=>ck(k,QLABEL[k],'qTypes')).join('')}</div>
    </fieldset>
    <fieldset><legend>What you can see</legend>
     ${ck('showOppName','Their deck name (off hides it until the match review)')}
@@ -600,23 +658,25 @@ picker(which){
 },
 match(){
   const HOW={
-   full:'Press Start. Both sides play: tap your cards when you have the elixir. Keep a running “up 2 / down 3” count from the cards each side plays, and read their elixir off your own bar. Every few of their plays the game pauses and asks.',
-   rapid:'Same as a full match, but it asks after every card they play. Each card shows big with its cost. Keep your “up / down” count and compare it with your bar. 10 seconds per answer.',
-   cycle:'Press Start and watch their plays. Remember the order: a card they play goes to the back of their queue and comes back after 4 more plays. Questions ask which 4 cards are in their hand, how many plays until a card returns, and when their evolution is ready.',
-   double:'Starts in double elixir. Both sides fill twice as fast, so cards come quicker, but the up / down count works exactly the same. One minute.',
+   elixir:'Both sides are played for you with real trades: they push with their win condition, you answer with a card priced close to it, they counterpush. Keep a running “up 2 / down 3” count and read their elixir off your own bar. The game freezes at random moments and asks.',
+   cycle:'Their deck is hidden until they play each card. Every card shows for 2 seconds, then it is gone. Hold the order in your head: a played card goes to the back and comes back 4 plays later. Questions: is a card in their hand, which comes back next, which card did they play 3 plays ago.',
+   full:'You play your hand; tap a hero or champion ability when it lights up (it costs elixir). They push, defend your pushes and punish when you overspend. Questions come at random moments.',
+   double:'Starts in double elixir. Trades come twice as fast; the count works exactly the same. One minute.',
    custom:'Press Start. Questions follow your Settings.'};
   return `<details class="howd" ${G.t>S.startAt?'':'open'}><summary>How this drill works</summary><p>${HOW[G.mode]||HOW.custom}</p><p class="mute">Keyboard: Space pauses, number keys answer, Enter continues. Memory mode hides their play history and flashes each card for 2 seconds, so you have to remember it.</p></details>
   <section class="hud" id="hud">
    <div class="clockbar"><div class="row"><span class="clock mono" id="clock"></span><span class="phase" id="phase"></span></div><div class="ctl" id="ctl"></div></div>
    <div class="side opp"><div class="who"><b>Opponent</b><div class="status" id="opstatus"></div>${S.showOppName?`<span class="mute small" id="oppname">${esc(G.op.deck.t)}</span>`:''}</div>
-     <div class="big" id="bigplay"><span class="mute small">Their plays will show here.</span></div>
+     <div class="arena" id="arena" aria-hidden="true"><div class="river"></div><div class="lane l"></div><div class="lane r"></div><div class="atow t1"></div><div class="atow t2"></div><div class="atow t3"></div><div class="atow t4"></div></div>
+     <div class="lastline" id="lastline" aria-live="polite"><span class="mute small">Their plays show on the arena.</span></div>
      <div class="elix" id="oppelix" ${S.showOppElixir?'':'hidden'}><span class="enum" id="oenum"></span><div class="ebar" id="oebar">${'<i><b></b></i>'.repeat(10)}</div></div>
 <p class="lbl" id="histlbl" style="margin-top:2px" ${S.memory?'hidden':''}>Their recent plays</p>
      <div class="feed" id="opfeed" aria-live="polite" ${S.memory?'hidden':''}></div>
      <details ${S.revealDeck?'':'hidden'}><summary class="mute small">Their deck</summary><div class="cards" style="margin-top:8px" id="opdeck"></div></details>
    </div>
    ${S.youPlay?`<div class="side">
-     <div class="hand" id="hand"></div>
+     ${S.autoMe?'<p class="lbl">Your hand · played for you</p>':''}
+     <div class="hand" id="hand"></div><div class="row" id="abil"></div>
      <div class="elix"><span class="enum" id="enum"></span><div class="ebar" id="ebar">${'<i><b></b></i>'.repeat(10)}</div></div>
 </div>`:`<div class="side"><div class="who"><b>Watch mode</b><span class="mute small">You don't play. Count their elixir.</span></div><p class="mute small">Their elixir bar is hidden on purpose. Use the play times above and the clock.</p></div>`}
   </section>`;
@@ -641,11 +701,23 @@ feed(){
     el.innerHTML=evs.slice(-14).map((e,k,a)=>`<div class="ev ${k===a.length-1?'new':''}">${cardHTML(e.card,{size:'sm',role:e.role==='evo'?'evo':e.role==='hero'?'hero':null,evolved:e.evolved,cost:e.cost})}${e.ability?'<span class="abil">ABILITY</span>':''}<span class="ts">${fmtT(e.t)}</span></div>`).join('')||'<span class="mute small">No plays yet</span>';
     el.scrollLeft=el.scrollWidth};
   mk('op','#opfeed');mk('me','#mefeed');
-  const bp=$('#bigplay');if(bp){const last=[...G.events].reverse().find(e=>e.who==='op'&&e.card);
-    if(last&&S.memory&&G.lastBig!==last){clearTimeout(G.memT);G.memShown=false;G.lastBig=last;G.memT=setTimeout(()=>{const b=$('#bigplay');if(b&&S.memory)b.innerHTML=`<div class="memo">?</div><div><div class="bigtxt">Remember it</div><div class="mute small">${G.op.plays.filter(e=>!e.ability).length} plays so far</div></div>`},2000)}
-    const skipBig=last&&S.memory&&G.lastBig===last&&G.memShown;
-    if(last&&S.memory)G.memShown=true;
-    if(last&&!skipBig)bp.innerHTML=`<div class="ev new">${cardHTML(last.card,{size:'lg',role:last.role==='evo'?'evo':last.role==='hero'?'hero':null,evolved:last.evolved,cost:last.cost})}</div><div><div class="bigtxt">${last.ability?esc(last.card)+' ability':esc(last.card)}${last.evolved?' (evolved)':''}</div><div class="mono" style="font-size:20px;color:#f4a0f6">−${last.cost} elixir</div><div class="mute small mono">played at ${fmtT(last.t)}</div></div>`}
+  const ar=$('#arena'),ll=$('#lastline');
+  if(ar){
+    const tok=(e,who)=>{if(e.lane==null){e.lane=Math.random()<.5?0:1;e.dy=Math.random()}
+      const x=e.lane?72:28, y=who==='op'?12+e.dy*22:62+e.dy*18;
+      return `<div class="tok ${who}${G.memHide&&who==='op'?' gone':''}" style="left:${x}%;top:${y}%">${cardHTML(e.card,{size:'sm',role:e.role==='evo'?'evo':e.role==='hero'?'hero':null,evolved:e.evolved,cost:e.cost})}</div>`};
+    const lastOp=[...G.events].reverse().find(e=>e.who==='op'&&e.card);
+    const lastMe=[...G.events].reverse().find(e=>e.who==='me'&&e.card);
+    if(lastOp&&G.lastBig!==lastOp){G.lastBig=lastOp;G.memHide=false;clearTimeout(G.memT);
+      if(S.memory)G.memT=setTimeout(()=>{G.memHide=true;const t=$('#arena .tok.op');if(t)t.classList.add('gone');const l=$('#lastline');if(l)l.innerHTML=`<span class="mute small">Remember it · ${G.op.plays.filter(e=>!e.ability).length} plays so far</span>`},2000)}
+    ar.querySelectorAll('.tok').forEach(t=>t.remove());
+    ar.insertAdjacentHTML('beforeend',(lastOp?tok(lastOp,'op'):'')+(lastMe?tok(lastMe,'me'):''));
+    if(ll&&lastOp&&!(S.memory&&G.memHide))ll.innerHTML=`<b>${esc(lastOp.card)}${lastOp.ability?' ability':''}${lastOp.evolved?' (evolved)':''}</b> <span class="mono" style="color:#f4a0f6">−${lastOp.cost}</span> <span class="mute small mono">${fmtT(lastOp.t)}</span>`;
+  }
+  const ab=$('#abil');if(ab){ab.innerHTML=(!aiControlled(G.me)?G.me.ready:[]).map((a,k)=>`<button class="btn gold" data-ab="${k}" ${a.next&&G.t<a.next?'disabled':''}>⚡ ${esc(a.card)} ability (${a.cost})${a.next&&G.t<a.next?' · recharging':''}</button>`).join('');
+    ab.querySelectorAll('[data-ab]').forEach(b=>b.onclick=()=>{const a=G.me.ready[+b.dataset.ab];if(!a||!G.running||G.qOpen||(a.next&&G.t<a.next))return;if(G.me.elixir+1e-9<a.cost)return;
+      const before=G.me.elixir;G.me.elixir-=a.cost;const ev={t:G.t,who:'me',card:a.card,cost:a.cost,before,after:G.me.elixir,ability:true};G.events.push(ev);G.me.plays.push(ev);
+      if(!a.champ)G.me.ready.splice(+b.dataset.ab,1);else a.next=G.t+12;render.feed()})}
   const od=$('#opdeck');if(od)od.innerHTML=G.op.deck.c.filter(n=>S.revealDeck||G.op.seen.has(n)).map(n=>cardHTML(n,{size:'sm',role:G.op.roles[n],pips:G.op.roles[n]==='evo'&&S.qTypes.evo?null:null})).join('');
   const h=$('#hand');if(h&&S.youPlay){const p=G.me;h.innerHTML=p.hand.map(n=>cardHTML(n,{button:1,role:p.roles[n],pips:p.roles[n]==='evo'?p.evo[n]:null,evolved:p.roles[n]==='evo'&&p.evo[n]>=evoCycles(n)})).join('')+(p.queue[0]?`<div class="nextc">${cardHTML(p.queue[0],{size:'sm',role:p.roles[p.queue[0]]})}NEXT</div>`:'');
     h.querySelectorAll('button.card').forEach(b=>b.onclick=()=>{if(!G.running||G.qOpen)return;if(doPlay(G.me,b.dataset.card))afterPlay('me')})}
@@ -660,12 +732,14 @@ question(q){
   let input='';
   if(q.kind==='pad'){const max=q.max??10;input=`<div class="pad">${Array.from({length:max+1},(_,v)=>`<button data-a="${v}">${v}</button>`).join('')}</div>`}
   if(q.kind==='diff'){input=`<div class="pad">${Array.from({length:21},(_,k)=>k-10).filter(v=>v>=-10&&v<=10).map(v=>`<button data-a="${v}">${v>0?'+'+v:v}</button>`).join('')}</div><p class="mute small">+ means you are up, − means they are up.</p>`}
+  if(q.kind==='mc'){input=`<div class="opts" id="mcopts">${q.opts.map(o=>`<button data-mc="${esc(o)}">${esc(o)}</button>`).join('')}</div>`}
   if(q.kind==='multi'){input=`<div class="cards" id="msel">${q.opts.map(n=>cardHTML(n,{button:1,role:G.op.roles[n]})).join('')}</div><button class="btn pri" id="msub" disabled>Lock in 4 cards</button>`}
   const recent=G.events.filter(e=>e.who==='op'&&e.card).slice(S.showLog?-4:-1);
   const ctx=!S.memory&&(q.k==='elixir'||q.k==='diff')&&recent.length?`<div><p class="lbl">Their last ${recent.length>1?recent.length+' plays':'play'} · clock now ${fmtT(q.t)}</p><div class="cards" style="margin-top:6px">${recent.map(e=>`<div class="ev" style="display:flex;flex-direction:column;align-items:center;gap:2px">${cardHTML(e.card,{size:'sm',role:e.role==='evo'?'evo':e.role==='hero'?'hero':null,cost:e.cost})}<span style="font-size:11px;font-weight:800;max-width:70px;text-align:center;line-height:1.1">${esc(e.card)}${e.ability?' ability':''} −${e.cost}</span><span class="mono" style="font-size:10px;color:var(--mute)">${fmtT(e.t)}</span></div>`).join('')}</div></div>`:'';
   w.innerHTML=`<div class="q" role="dialog" aria-modal="true" aria-labelledby="qh"><div class="row" style="justify-content:space-between"><span class="qk">${esc(q.label)} · ${fmtT(q.t)}</span><span class="qk">${G.questions.length+1}</span></div><h2 id="qh">${q.prompt}</h2>${ctx}${S.timer?'<div class="timer"><b id="tb"></b></div>':''}${input}<div id="fb"></div></div>`;
   ROOT.querySelector('.labroot').appendChild(w);
   w.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{if(q.done)return;q.done=1;answer(q,+b.dataset.a)});
+  w.querySelectorAll('[data-mc]').forEach(b=>b.onclick=()=>{if(q.done)return;q.done=1;answer(q,b.dataset.mc)});
   if(q.kind==='multi'){const sel=new Set();w.querySelectorAll('#msel button.card').forEach(b=>b.onclick=()=>{if(q.done)return;const n=b.dataset.card;sel.has(n)?sel.delete(n):sel.size<4&&sel.add(n);b.classList.toggle('sel',sel.has(n));$('#msub').disabled=sel.size!==4});
     $('#msub').onclick=()=>{if(q.done)return;q.done=1;answer(q,[...sel])}}
   if(S.timer){const T=S.timer*1000;const st=performance.now();qTimer=setInterval(()=>{const f=1-(performance.now()-st)/T;const tb=$('#tb');if(tb)tb.style.transform=`scaleX(${Math.max(0,f)})`;if(f<=0&&!q.done){q.done=1;answer(q,null)}},50)}
@@ -679,6 +753,7 @@ feedback(q){
   else if(q.kind==='multi')val=`In hand: <b>${q.answer.map(esc).join(', ')}</b>`;
   else val=`Answer: <b>${q.answer}</b>${q.given!=null?`, you said ${q.given}`:', time ran out'}`;
   ROOT.querySelectorAll('#qwrap [data-a]').forEach(b=>{b.disabled=true;if(+b.dataset.a===q.answer)b.style.borderColor='var(--good)'});
+  ROOT.querySelectorAll('#mcopts [data-mc]').forEach(b=>{b.disabled=true;if(b.dataset.mc===q.answer)b.classList.add('ok');else if(b.dataset.mc===q.given)b.classList.add('no')});
   if(q.kind==='multi')ROOT.querySelectorAll('#msel button.card').forEach(b=>{b.disabled=true;if(q.answer.includes(b.dataset.card))b.classList.add('sel')});
   fb.innerHTML=`<div class="fb ${q.ok?'ok':'no'}"><span class="v">${q.ok?'Right':'Not quite'}</span><span>${val}</span><span class="why">${q.why()}</span></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn pri" id="qnext">Continue <span class="kbd">Enter</span></button></div>`;
   const nx=$('#qnext');nx.focus();nx.onclick=()=>{closeQ();render.hud()};
@@ -744,7 +819,7 @@ stats(){
     ${[0,mx/2,mx].map(v=>`<line x1="${p}" x2="${W-10}" y1="${Hh-20-(v/mx)*(Hh-40)}" y2="${Hh-20-(v/mx)*(Hh-40)}" stroke="#2c3a60"/><text x="${p-6}" y="${Hh-16-(v/mx)*(Hh-40)}" fill="#93a0c4" font-size="11" text-anchor="end" font-family="JetBrains Mono,monospace">${v.toFixed(1)}</text>`).join('')}
     <polyline points="${pts}" fill="none" stroke="#d23fd6" stroke-width="2.5"/>${last.map((h,k)=>`<circle cx="${p+k*(W-p-10)/Math.max(1,last.length-1)}" cy="${Hh-20-(h.mae/mx)*(Hh-40)}" r="${k===last.length-1?5:3}" fill="#d23fd6"/>`).join('')}</svg></div></div>`:''}
    <div class="tblw"><table><thead><tr><th>Question type</th><th>Right</th><th>Rate</th></tr></thead><tbody>${Object.entries(agg).sort((a,b)=>a[1].ok/a[1].n-b[1].ok/b[1].n).map(([k,v])=>`<tr><td>${QLABEL[k]||k}</td><td class="mono">${v.ok}/${v.n}</td><td class="mono ${v.ok/v.n>=.7?'good':'bad'}">${Math.round(v.ok/v.n*100)}%</td></tr>`).join('')}</tbody></table></div>
-   <div class="tblw"><table><thead><tr><th>When</th><th>Drill</th><th>Score</th><th>Elixir miss</th></tr></thead><tbody>${H.slice(-15).reverse().map(h=>`<tr><td class="mono small">${new Date(h.at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td>${h.mode==='quiz'?'Card IQ':esc((PRESETS[h.mode]||{label:'Custom'}).label)}</td><td class="mono">${h.ok}/${h.n}</td><td class="mono">${h.mae!=null?h.mae.toFixed(2):'—'}</td></tr>`).join('')}</tbody></table></div>
+   <div class="tblw"><table><thead><tr><th>When</th><th>Drill</th><th>Score</th><th>Elixir miss</th></tr></thead><tbody>${H.slice(-15).reverse().map(h=>`<tr><td class="mono small">${new Date(h.at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td><td>${h.mode==='quiz'?'Card IQ':esc((PRESETS[h.mode]||{label:LEGACY[h.mode]||'Custom'}).label)}</td><td class="mono">${h.ok}/${h.n}</td><td class="mono">${h.mae!=null?h.mae.toFixed(2):'—'}</td></tr>`).join('')}</tbody></table></div>
    <div><button class="btn" data-wipe="1">Clear progress</button> <span id="wipeask"></span></div>
   </section>`;
 }
@@ -783,7 +858,7 @@ app.addEventListener('click',e=>{
 });
 app.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset.pool){const g=t.dataset.pool;S.oppPool=t.checked?[...new Set([...S.oppPool,g])]:S.oppPool.filter(x=>x!==g);saveS();render.page();return}
+  if(t.dataset.pool){const g=t.dataset.pool;const nx=t.checked?[...new Set([...S.oppPool,g])]:S.oppPool.filter(x=>x!==g);if(!nx.length){t.checked=true;return}S.oppPool=nx;saveS();render.page();return}
   if(t.dataset.ck){if(t.dataset.obj)S[t.dataset.obj][t.dataset.ck]=t.checked;else S[t.dataset.ck]=t.checked;saveS();render.page();return}
   if(t.dataset.evo){S.evoOverride[t.dataset.evo]=+t.value;saveS();render.page();return}
 });
@@ -797,7 +872,7 @@ ON('visibilitychange',()=>{if(document.hidden&&G.running)pause()});
 render.page();
 return {pause:()=>{if(G.running)pause()}};
 }
-const LABCSS="[hidden]{display:none!important}\nimg{max-width:100%}\n\n/* Layout: one-column \"war room\" \u2014 clock rail on top, opponent above, play feed in the middle, your hand at the bottom, like the game screen. */\n:host{\n  display:block;\n  --bg:#0e1424; --panel:#172038; --panel2:#1f2b4a; --line:#2c3a60;\n  --fg:#e9eefc; --mute:#93a0c4; --dim:#5d6a90;\n  --elixir:#d23fd6; --elixir2:#8f2cc4; --gold:#f2b632; --good:#3fcf8e; --bad:#ff5d6c; --warn:#ffb648;\n  --troop:#4f7bff; --spell:#ff8a3d; --bldg:#8d97ad; --champ:#f2b632; --evo:#c06bff; --hero:#2fd0c8;\n  --display:'Lilita One','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;\n  --body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;\n  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;\n  color-scheme:dark;\n}\n*{box-sizing:border-box}\n.labroot{background:var(--bg);color:var(--fg);border-radius:16px;font-family:var(--body);font-size:15px;line-height:1.45;padding:12px 12px 20px;\n  background-image:radial-gradient(1200px 500px at 50% -200px,#26315a 0%,transparent 70%)}\n.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}\nh1,h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.3px;margin:0;text-wrap:balance}\nh1{font-size:30px;line-height:1.1}\nh2{font-size:21px}\nh3{font-size:17px}\np{margin:0}\n.mute{color:var(--mute)}\n.small{font-size:13px}\n.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}\nbutton{font:inherit;color:inherit;cursor:pointer}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}\n.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-weight:800}\n.btn:hover{border-color:var(--mute)}\n.btn.pri{background:linear-gradient(180deg,#e351e6,var(--elixir2));border-color:#f07ff3;color:#fff;box-shadow:0 3px 0 #5d1a85}\n.btn.gold{background:linear-gradient(180deg,#ffd36b,#e19b13);color:#2a1a00;border-color:#ffe39f;box-shadow:0 3px 0 #8a5a00}\n.btn:disabled{opacity:.45;cursor:default}\n.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}\n.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}\n.brand{display:flex;align-items:center;gap:10px}\n.drop{width:30px;height:30px;flex:none}\n.tabs{display:flex;gap:6px;flex-wrap:wrap}\n.tab{background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:800;color:var(--mute)}\n.tab[aria-selected=true]{background:var(--panel2);color:var(--fg);border-color:var(--elixir)}\n.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}\n/* mode cards */\n.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}\n.mode{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}\n.mode:hover{border-color:var(--elixir)}\n.mode .k{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--elixir)}\n.mode h3{font-size:19px}\n.mode p{color:var(--mute);font-size:13.5px}\n/* settings */\n.set{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}\n.fld{display:flex;flex-direction:column;gap:5px;min-width:0}\n.fld label,.lbl{font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--mute);font-weight:800}\nselect,input[type=text],input[type=number],input[type=search]{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;width:100%;min-width:0}\ninput[type=range]{width:100%;accent-color:var(--elixir)}\n.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px}\n.chk input{margin-top:3px;accent-color:var(--elixir)}\n.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}\n.seg button{flex:1;background:transparent;border:0;padding:7px 6px;font-weight:800;color:var(--mute);font-size:13px}\n.seg button[aria-pressed=true]{background:var(--panel2);color:var(--fg);box-shadow:inset 0 -2px 0 var(--elixir)}\nfieldset{border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}\nlegend{font-family:var(--display);font-size:16px;padding:0 6px}\n/* cards */\n.card{position:relative;width:64px;flex:none;aspect-ratio:3/4;border-radius:9px;background:linear-gradient(180deg,#2a3760,#1a2342);border:2px solid var(--troop);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 3px 3px;text-align:center;overflow:hidden;user-select:none}\n.card.spell{border-color:var(--spell)} .card.bldg{border-color:var(--bldg)} .card.champ{border-color:var(--champ);background:linear-gradient(180deg,#4a3a12,#241c08)}\n.card.evo{box-shadow:0 0 0 2px var(--evo),0 0 14px -2px var(--evo)} .card.hero{box-shadow:0 0 0 2px var(--hero),0 0 14px -2px var(--hero)}\n.card .ab{font-family:var(--display);font-size:19px;line-height:1;margin-top:6px}\n.card .nm{font-size:9.5px;line-height:1.1;color:var(--mute);margin-top:3px;font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}\n.card .cost{position:absolute;top:2px;left:2px;width:19px;height:22px;display:grid;place-items:center;font-family:var(--display);font-size:13px;color:#fff;\n  background:radial-gradient(circle at 40% 35%,#f48cf5,var(--elixir) 45%,var(--elixir2));clip-path:path('M9.5 0C9.5 0 19 9 19 14A9.5 8 0 0 1 0 14C0 9 9.5 0 9.5 0Z');padding-top:5px}\n.card .tag{position:absolute;bottom:2px;left:2px;right:2px;font-size:8.5px;font-weight:800;letter-spacing:.6px;border-radius:4px;padding:1px 0}\n.card.evo .tag{background:var(--evo);color:#1a0b2a} .card.hero .tag{background:var(--hero);color:#04211f} .card.champ .tag{background:var(--champ);color:#2a1a00}\n.card .pips{position:absolute;top:4px;right:3px;display:flex;flex-direction:column;gap:2px}\n.card .pips i{width:6px;height:6px;border-radius:50%;border:1px solid var(--evo);display:block}\n.card .pips i.on{background:var(--evo)}\n.card.sm{width:46px}.card.sm .ab{font-size:14px;margin-top:5px}.card.sm .nm{display:none}.card.sm .cost{transform:scale(.8);transform-origin:0 0}\n.card.lg{width:96px}.card.lg .ab{font-size:28px}.card.lg .nm{font-size:11px}\nbutton.card{cursor:pointer;color:inherit;font:inherit}\nbutton.card:disabled{filter:grayscale(.8) brightness(.7);cursor:default}\nbutton.card.sel{outline:3px solid var(--gold);outline-offset:1px}\n.cards{display:flex;gap:6px;flex-wrap:wrap}\n/* match */\n.hud{display:flex;flex-direction:column;gap:10px}\n.clockbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px}\n.clock{font-family:var(--mono);font-size:22px;font-weight:700}\n.phase{font-family:var(--display);font-size:16px;padding:2px 10px;border-radius:999px;background:var(--panel2)}\n.phase.x2{background:var(--elixir);color:#fff}.phase.x3{background:var(--gold);color:#2a1a00}\n.side{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}\n.side.opp{border-color:#5b2a3a;background:linear-gradient(180deg,#2a1729,#1b1730)}\n.who{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}\n.who b{font-family:var(--display);font-weight:400;font-size:17px}\n.feed{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;min-height:70px;align-items:flex-end}\n.feed .ev{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none}\n.feed .ev .ts{font-family:var(--mono);font-size:10px;color:var(--dim)}\n.feed .ev.new .card{animation:pop .45s ease-out}\n.feed .ev .abil{font-size:9px;font-weight:800;color:var(--gold)}\n@keyframes pop{0%{transform:translateY(-14px) scale(1.15);opacity:0}100%{transform:none;opacity:1}}\n@media (prefers-reduced-motion:reduce){.feed .ev.new .card{animation:none}}\n.elix{display:flex;align-items:center;gap:8px}\n.ebar{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;height:22px;position:relative}\n.ebar i{border-radius:4px;background:#2b2140;position:relative;overflow:hidden;border:1px solid #3a2b55}\n.ebar i b{position:absolute;inset:0;background:linear-gradient(180deg,#f070f2,var(--elixir2));transform-origin:left;transform:scaleX(0)}\n.enum{font-family:var(--display);font-size:24px;width:34px;text-align:center;color:#f4a0f6}\n.hand{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}\n.nextc{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--mute);font-weight:800}\n.status{display:flex;gap:6px;flex-wrap:wrap}\n.chip{font-size:12px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--mute);background:var(--bg)}\n.chip.p{border-color:var(--elixir);color:#f4a0f6}.chip.g{border-color:var(--gold);color:var(--gold)}.chip.e{border-color:var(--evo);color:#d9a6ff}\n.big{display:flex;align-items:center;gap:14px;min-height:96px;justify-content:center}\n.bigtxt{font-family:var(--display);font-size:18px}\n.ctl{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}\n/* question */\n.qwrap{position:fixed;inset:0;background:rgba(6,9,18,.78);display:grid;place-items:center;z-index:50;padding:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));backdrop-filter:blur(3px)}\n.q{width:min(560px,100%);max-height:calc(100% - 20px);overflow:auto;background:var(--panel);border:2px solid var(--elixir);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px #000a}\n.q .qk{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--elixir)}\n.q h2{font-size:22px}\n.timer{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}\n.timer b{display:block;height:100%;background:var(--gold);transform-origin:left}\n.pad{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}\n.pad button{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 0;font-family:var(--display);font-size:22px}\n.pad button:hover{border-color:var(--elixir)}\n.opts{display:grid;gap:8px}\n.opts button{text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700}\n.opts button:hover{border-color:var(--elixir)}\n.opts button.ok{border-color:var(--good);background:#143a2c}.opts button.no{border-color:var(--bad);background:#3d1520}\n.fb{border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}\n.fb.ok{background:#11352a;border:1px solid var(--good)}.fb.no{background:#3a1520;border:1px solid var(--bad)}\n.fb .v{font-family:var(--display);font-size:20px}\n.why{font-size:13.5px;color:#c9d2ee}\n.why .mono{font-size:12.5px}\n/* summary */\n.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}\n.kpi{background:var(--panel2);border-radius:12px;padding:10px 12px}\n.kpi .n{font-family:var(--display);font-size:28px;line-height:1.1}\n.kpi .l{font-size:12px;color:var(--mute);font-weight:800}\n.chart{overflow-x:auto}\n.chart svg{display:block;width:100%;min-width:520px;height:auto}\ntable{border-collapse:collapse;width:100%;font-size:13.5px}\nth,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}\nth{font-size:11.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mute)}\n.tblw{overflow-x:auto}\n.good{color:var(--good)}.bad{color:var(--bad)}\n.deckpick{display:flex;flex-direction:column;gap:8px}\n.dlist{max-height:300px;overflow:auto;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:6px}\n.ditem{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid transparent;border-radius:8px;padding:6px;text-align:left;min-width:0}\n.ditem[aria-pressed=true]{border-color:var(--gold)}\n.ditem .dt{font-weight:800;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.ditem .cards{flex-wrap:nowrap;gap:3px}\n.ditem .card.sm{width:30px}.ditem .card.sm .ab{font-size:10px;margin-top:6px}\n.note{font-size:12.5px;color:var(--mute);border-left:3px solid var(--line);padding-left:10px}\n.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px}\n/* compact match screen: everything on one phone screen */\n.mtop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}\n.howd{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px}\n.howd summary{cursor:pointer;font-weight:800;color:var(--mute)}\n.howd p{margin-top:6px}\n.clockbar{padding:6px 10px;flex-wrap:wrap}\n.phase{white-space:nowrap}\n.ctl{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}\n.ctl .btn{flex:none;white-space:nowrap}\n.ctl .btn{padding:6px 10px;font-size:13px}\n.ctl .btn[aria-pressed=true]{border-color:var(--elixir);color:#f4a0f6}\n.side{padding:10px;gap:8px}\n.big{min-height:0;justify-content:flex-start;gap:12px}\n.big .card{width:70px}\n.feed{min-height:0}\n.memo{display:grid;place-items:center;width:70px;aspect-ratio:3/4;border:2px dashed var(--line);border-radius:9px;font-family:var(--display);font-size:26px;color:var(--dim)}\n.hud{gap:8px}\n@media (max-width:520px){h1{font-size:25px}.card{width:56px}.card.lg{width:82px}.pad button{font-size:19px;padding:9px 0}}\n\n/* CR Decks app: card pictures from pics/ (and any you added) fill the tile; cost, EVO/HERO tag and evo pips sit on top */\n.card.pic{padding:0;background:#10182e}\n.card.pic>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}\n.card.pic .ab,.card.pic .nm{display:none}\n.card.pic .cost,.card.pic .tag,.card.pic .pips{z-index:1}\n.card.pic .tag{text-shadow:none}\n.qwrap{font-family:var(--body);color:var(--fg);line-height:1.45}\n/* deck lists: on a phone the name goes on its own line above the 8 cards */\n@media (max-width:560px){.deckpick .row input[type=search]{flex:1 1 100%!important}.deckpick .row select{flex:1 1 100%;width:100%!important}.ditem{flex-wrap:wrap}.ditem>div:first-child{flex:1 1 100%!important}.ditem .card.sm{width:34px}}\n";
+const LABCSS="[hidden]{display:none!important}\nimg{max-width:100%}\n\n/* Layout: one-column \"war room\" \u2014 clock rail on top, opponent above, play feed in the middle, your hand at the bottom, like the game screen. */\n:host{\n  display:block;\n  --bg:#0e1424; --panel:#172038; --panel2:#1f2b4a; --line:#2c3a60;\n  --fg:#e9eefc; --mute:#93a0c4; --dim:#5d6a90;\n  --elixir:#d23fd6; --elixir2:#8f2cc4; --gold:#f2b632; --good:#3fcf8e; --bad:#ff5d6c; --warn:#ffb648;\n  --troop:#4f7bff; --spell:#ff8a3d; --bldg:#8d97ad; --champ:#f2b632; --evo:#c06bff; --hero:#2fd0c8;\n  --display:'Lilita One','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;\n  --body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;\n  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;\n  color-scheme:dark;\n}\n*{box-sizing:border-box}\n.labroot{background:var(--bg);color:var(--fg);border-radius:16px;font-family:var(--body);font-size:15px;line-height:1.45;padding:12px 12px 20px;\n  background-image:radial-gradient(1200px 500px at 50% -200px,#26315a 0%,transparent 70%)}\n.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}\nh1,h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.3px;margin:0;text-wrap:balance}\nh1{font-size:30px;line-height:1.1}\nh2{font-size:21px}\nh3{font-size:17px}\np{margin:0}\n.mute{color:var(--mute)}\n.small{font-size:13px}\n.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}\nbutton{font:inherit;color:inherit;cursor:pointer}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}\n.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-weight:800}\n.btn:hover{border-color:var(--mute)}\n.btn.pri{background:linear-gradient(180deg,#e351e6,var(--elixir2));border-color:#f07ff3;color:#fff;box-shadow:0 3px 0 #5d1a85}\n.btn.gold{background:linear-gradient(180deg,#ffd36b,#e19b13);color:#2a1a00;border-color:#ffe39f;box-shadow:0 3px 0 #8a5a00}\n.btn:disabled{opacity:.45;cursor:default}\n.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}\n.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}\n.brand{display:flex;align-items:center;gap:10px}\n.drop{width:30px;height:30px;flex:none}\n.tabs{display:flex;gap:6px;flex-wrap:wrap}\n.tab{background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-weight:800;color:var(--mute)}\n.tab[aria-selected=true]{background:var(--panel2);color:var(--fg);border-color:var(--elixir)}\n.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}\n/* mode cards */\n.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}\n.mode{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}\n.mode:hover{border-color:var(--elixir)}\n.mode .k{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--elixir)}\n.mode h3{font-size:19px}\n.mode p{color:var(--mute);font-size:13.5px}\n/* settings */\n.set{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}\n.fld{display:flex;flex-direction:column;gap:5px;min-width:0}\n.fld label,.lbl{font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--mute);font-weight:800}\nselect,input[type=text],input[type=number],input[type=search]{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;width:100%;min-width:0}\ninput[type=range]{width:100%;accent-color:var(--elixir)}\n.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px}\n.chk input{margin-top:3px;accent-color:var(--elixir)}\n.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}\n.seg button{flex:1;background:transparent;border:0;padding:7px 6px;font-weight:800;color:var(--mute);font-size:13px}\n.seg button[aria-pressed=true]{background:var(--panel2);color:var(--fg);box-shadow:inset 0 -2px 0 var(--elixir)}\nfieldset{border:1px solid var(--line);border-radius:12px;padding:12px;margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}\nlegend{font-family:var(--display);font-size:16px;padding:0 6px}\n/* cards */\n.card{position:relative;width:64px;flex:none;aspect-ratio:3/4;border-radius:9px;background:linear-gradient(180deg,#2a3760,#1a2342);border:2px solid var(--troop);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 3px 3px;text-align:center;overflow:hidden;user-select:none}\n.card.spell{border-color:var(--spell)} .card.bldg{border-color:var(--bldg)} .card.champ{border-color:var(--champ);background:linear-gradient(180deg,#4a3a12,#241c08)}\n.card.evo{box-shadow:0 0 0 2px var(--evo),0 0 14px -2px var(--evo)} .card.hero{box-shadow:0 0 0 2px var(--hero),0 0 14px -2px var(--hero)}\n.card .ab{font-family:var(--display);font-size:19px;line-height:1;margin-top:6px}\n.card .nm{font-size:9.5px;line-height:1.1;color:var(--mute);margin-top:3px;font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}\n.card .cost{position:absolute;top:2px;left:2px;width:19px;height:22px;display:grid;place-items:center;font-family:var(--display);font-size:13px;color:#fff;\n  background:radial-gradient(circle at 40% 35%,#f48cf5,var(--elixir) 45%,var(--elixir2));clip-path:path('M9.5 0C9.5 0 19 9 19 14A9.5 8 0 0 1 0 14C0 9 9.5 0 9.5 0Z');padding-top:5px}\n.card .tag{position:absolute;bottom:2px;left:2px;right:2px;font-size:8.5px;font-weight:800;letter-spacing:.6px;border-radius:4px;padding:1px 0}\n.card.evo .tag{background:var(--evo);color:#1a0b2a} .card.hero .tag{background:var(--hero);color:#04211f} .card.champ .tag{background:var(--champ);color:#2a1a00}\n.card .pips{position:absolute;top:4px;right:3px;display:flex;flex-direction:column;gap:2px}\n.card .pips i{width:6px;height:6px;border-radius:50%;border:1px solid var(--evo);display:block}\n.card .pips i.on{background:var(--evo)}\n.card.sm{width:46px}.card.sm .ab{font-size:14px;margin-top:5px}.card.sm .nm{display:none}.card.sm .cost{transform:scale(.8);transform-origin:0 0}\n.card.lg{width:96px}.card.lg .ab{font-size:28px}.card.lg .nm{font-size:11px}\nbutton.card{cursor:pointer;color:inherit;font:inherit}\nbutton.card:disabled{filter:grayscale(.8) brightness(.7);cursor:default}\nbutton.card.sel{outline:3px solid var(--gold);outline-offset:1px}\n.cards{display:flex;gap:6px;flex-wrap:wrap}\n/* match */\n.hud{display:flex;flex-direction:column;gap:10px}\n.clockbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px}\n.clock{font-family:var(--mono);font-size:22px;font-weight:700}\n.phase{font-family:var(--display);font-size:16px;padding:2px 10px;border-radius:999px;background:var(--panel2)}\n.phase.x2{background:var(--elixir);color:#fff}.phase.x3{background:var(--gold);color:#2a1a00}\n.side{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}\n.side.opp{border-color:#5b2a3a;background:linear-gradient(180deg,#2a1729,#1b1730)}\n.who{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}\n.who b{font-family:var(--display);font-weight:400;font-size:17px}\n.feed{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;min-height:70px;align-items:flex-end}\n.feed .ev{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none}\n.feed .ev .ts{font-family:var(--mono);font-size:10px;color:var(--dim)}\n.feed .ev.new .card{animation:pop .45s ease-out}\n.feed .ev .abil{font-size:9px;font-weight:800;color:var(--gold)}\n@keyframes pop{0%{transform:translateY(-14px) scale(1.15);opacity:0}100%{transform:none;opacity:1}}\n@media (prefers-reduced-motion:reduce){.feed .ev.new .card{animation:none}}\n.elix{display:flex;align-items:center;gap:8px}\n.ebar{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;height:22px;position:relative}\n.ebar i{border-radius:4px;background:#2b2140;position:relative;overflow:hidden;border:1px solid #3a2b55}\n.ebar i b{position:absolute;inset:0;background:linear-gradient(180deg,#f070f2,var(--elixir2));transform-origin:left;transform:scaleX(0)}\n.enum{font-family:var(--display);font-size:24px;width:34px;text-align:center;color:#f4a0f6}\n.hand{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}\n.nextc{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--mute);font-weight:800}\n.status{display:flex;gap:6px;flex-wrap:wrap}\n.chip{font-size:12px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--mute);background:var(--bg)}\n.chip.p{border-color:var(--elixir);color:#f4a0f6}.chip.g{border-color:var(--gold);color:var(--gold)}.chip.e{border-color:var(--evo);color:#d9a6ff}\n.big{display:flex;align-items:center;gap:14px;min-height:96px;justify-content:center}\n.bigtxt{font-family:var(--display);font-size:18px}\n.ctl{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}\n/* question */\n.qwrap{position:fixed;inset:0;background:rgba(6,9,18,.78);display:grid;place-items:center;z-index:50;padding:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));backdrop-filter:blur(3px)}\n.q{width:min(560px,100%);max-height:calc(100% - 20px);overflow:auto;background:var(--panel);border:2px solid var(--elixir);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px #000a}\n.q .qk{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--elixir)}\n.q h2{font-size:22px}\n.timer{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}\n.timer b{display:block;height:100%;background:var(--gold);transform-origin:left}\n.pad{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}\n.pad button{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 0;font-family:var(--display);font-size:22px}\n.pad button:hover{border-color:var(--elixir)}\n.opts{display:grid;gap:8px}\n.opts button{text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-weight:700}\n.opts button:hover{border-color:var(--elixir)}\n.opts button.ok{border-color:var(--good);background:#143a2c}.opts button.no{border-color:var(--bad);background:#3d1520}\n.fb{border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}\n.fb.ok{background:#11352a;border:1px solid var(--good)}.fb.no{background:#3a1520;border:1px solid var(--bad)}\n.fb .v{font-family:var(--display);font-size:20px}\n.why{font-size:13.5px;color:#c9d2ee}\n.why .mono{font-size:12.5px}\n/* summary */\n.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}\n.kpi{background:var(--panel2);border-radius:12px;padding:10px 12px}\n.kpi .n{font-family:var(--display);font-size:28px;line-height:1.1}\n.kpi .l{font-size:12px;color:var(--mute);font-weight:800}\n.chart{overflow-x:auto}\n.chart svg{display:block;width:100%;min-width:520px;height:auto}\ntable{border-collapse:collapse;width:100%;font-size:13.5px}\nth,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}\nth{font-size:11.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mute)}\n.tblw{overflow-x:auto}\n.good{color:var(--good)}.bad{color:var(--bad)}\n.deckpick{display:flex;flex-direction:column;gap:8px}\n.dlist{max-height:300px;overflow:auto;display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:6px}\n.ditem{display:flex;gap:8px;align-items:center;background:var(--bg);border:1px solid transparent;border-radius:8px;padding:6px;text-align:left;min-width:0}\n.ditem[aria-pressed=true]{border-color:var(--gold)}\n.ditem .dt{font-weight:800;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.ditem .cards{flex-wrap:nowrap;gap:3px}\n.ditem .card.sm{width:30px}.ditem .card.sm .ab{font-size:10px;margin-top:6px}\n.note{font-size:12.5px;color:var(--mute);border-left:3px solid var(--line);padding-left:10px}\n.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px}\n/* arena */\n.arena{position:relative;height:178px;border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#3b2a4d 0%,#2f2545 46%,#2d5f8f 46%,#3a78ab 54%,#22324f 54%,#1e2a46 100%);border:1px solid var(--line)}\n.arena .river{position:absolute;left:0;right:0;top:46%;height:8%;background:repeating-linear-gradient(90deg,transparent 0 14px,#ffffff14 14px 28px)}\n.arena .lane{position:absolute;top:0;bottom:0;width:18%;background:#ffffff08}\n.arena .lane.l{left:19%}.arena .lane.r{right:19%}\n.arena .atow{position:absolute;width:22px;height:22px;border-radius:6px;background:#ff5d6c55;border:1px solid #ff5d6c88}\n.arena .t1{left:calc(28% - 11px);top:4%}.arena .t2{left:calc(72% - 11px);top:4%}\n.arena .t3,.arena .t4{background:#4f7bff55;border-color:#4f7bff99;bottom:4%}.arena .t3{left:calc(28% - 11px)}.arena .t4{left:calc(72% - 11px)}\n.arena .tok{position:absolute;transform:translate(-50%,0);transition:opacity .5s}\n.arena .tok .card{width:44px;animation:pop .45s ease-out}\n.arena .tok.gone{opacity:0}\n.lastline{min-height:22px;font-size:15px}\n@media (prefers-reduced-motion:reduce){.arena .tok .card{animation:none}}\n/* compact match screen: everything on one phone screen */\n.mtop{display:flex;align-items:center;gap:8px;flex-wrap:wrap}\n.howd{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px}\n.howd summary{cursor:pointer;font-weight:800;color:var(--mute)}\n.howd p{margin-top:6px}\n.clockbar{padding:6px 10px;flex-wrap:wrap}\n.phase{white-space:nowrap}\n.ctl{flex:1 1 100%;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding-bottom:2px}\n.ctl .btn{flex:none;white-space:nowrap}\n.ctl .btn{padding:6px 10px;font-size:13px}\n.ctl .btn[aria-pressed=true]{border-color:var(--elixir);color:#f4a0f6}\n.side{padding:10px;gap:8px}\n.big{min-height:0;justify-content:flex-start;gap:12px}\n.big .card{width:70px}\n.feed{min-height:0}\n.memo{display:grid;place-items:center;width:70px;aspect-ratio:3/4;border:2px dashed var(--line);border-radius:9px;font-family:var(--display);font-size:26px;color:var(--dim)}\n.hud{gap:8px}\n@media (max-width:520px){h1{font-size:25px}.card{width:56px}.card.lg{width:82px}.pad button{font-size:19px;padding:9px 0}}\n\n/* CR Decks app: card pictures from pics/ (and any you added) fill the tile; cost, EVO/HERO tag and evo pips sit on top */\n.card.pic{padding:0;background:#10182e}\n.card.pic>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;max-width:none}\n.card.pic .ab,.card.pic .nm{display:none}\n.card.pic .cost,.card.pic .tag,.card.pic .pips{z-index:1}\n.card.pic .tag{text-shadow:none}\n.qwrap{font-family:var(--body);color:var(--fg);line-height:1.45}\n/* deck lists: on a phone the name goes on its own line above the 8 cards */\n@media (max-width:560px){.deckpick .row input[type=search]{flex:1 1 100%!important}.deckpick .row select{flex:1 1 100%;width:100%!important}.ditem{flex-wrap:wrap}.ditem>div:first-child{flex:1 1 100%!important}.ditem .card.sm{width:34px}}\n";
 </script>
 <script>
 "use strict";
@@ -1072,17 +1147,36 @@ function saveEd(){const msg=$("edmsg");
   saveUser();ED=null;toast("Deck saved.");S={...S,sec:"all",q:"",only:BYKEY[key]?BYKEY[key].i:null};$("q").value="";setView("lib")}
 
 /* ---------- more ---------- */
-function renderMore(){$("count").textContent="";const nPics=Object.values(UPICS).filter(Boolean).length+BPICS.size;
+let GAL=false,GQ="",GF="all";
+function renderMore(){$("count").textContent="";if(GAL)return renderGallery();const nPics=Object.values(UPICS).filter(Boolean).length+BPICS.size;
   $("out").innerHTML=`<div class="page">
   <section class="card2"><h2>Back up or move everything</h2><p>One file with your added decks, favorites, hidden decks, imported battles, the pictures you added and your Elixir Lab progress. Open it here on another phone, or after reinstalling.</p>
     <div class="sbtns"><button class="btn gold grow" type="button" id="bksave">Save backup file</button><label class="btn grow">Restore from file<input type="file" id="bkfile" class="vh" accept=".json,application/json,*/*"></label></div><p class="msg" id="bkmsg"></p></section>
   <section class="card2"><h2>Card pictures</h2><p>${BPICS.size} pictures came with the app. Turn this on, then tap any card in any deck to give it a picture (normal, Evo and Hero forms each get their own).</p>
-    <button class="btn${EDIT?" gold":""}" type="button" id="picmode">${EDIT?"Done adding pictures":"Add or change card pictures"}</button></section>
+    <div class="sbtns"><button class="btn gold grow" type="button" id="galopen">Open card gallery</button><button class="btn${EDIT?" gold":""} grow" type="button" id="picmode">${EDIT?"Done adding pictures":"Pick from decks instead"}</button></div></section>
   <section class="card2"><h2>Hidden decks</h2><p>${HIDDEN.size?HIDDEN.size+" deck"+(HIDDEN.size===1?" is":"s are")+" hidden.":"No hidden decks. Use Details → Hide this deck to tidy the list."}</p>${HIDDEN.size?`<button class="btn" type="button" id="unhide">Show all hidden decks again</button>`:""}</section>
   <section class="card2"><h2>About</h2><p>${BASE.filter(d=>!d.oppOnly).length} library decks and ${BSEED.length} battles came with the app; ${USER.length} deck${USER.length===1?"":"s"} added by you. Everything stays on this phone.</p></section></div>`;
   $("bksave").onclick=saveBackup;$("bkfile").onchange=restoreBackup;
+  $("galopen").onclick=()=>{GAL=true;renderMore();scrollTo(0,0)};
   $("picmode").onclick=()=>{EDIT=!EDIT;document.body.classList.toggle("editpics",EDIT);if(EDIT){toast("Tap any card to set its picture.");setView("lib")}else renderMore()};
   if($("unhide"))$("unhide").onclick=()=>{HIDDEN.clear();lsSet("crd-hidden",[]);renderMore();toast("All decks are visible again.")}}
+function galCards(){const seen=new Set(),L=[];for(const [id,v] of Object.entries(CARDS)){if(!/^2[678]/.test(id)||!v||!v[0]||seen.has(v[0]))continue;seen.add(v[0]);L.push({id:+id,n:v[0],c:v[1]})}return L.sort((a,b)=>a.n.localeCompare(b.n))}
+function galForms(c){return ["base",...(EVO.has(c.n)?["evo"]:[]),...(HERO.has(c.n)?["hero"]:[])]}
+function galUrl(c,fm){const k=c.id+"_"+fm;if(k in UPICS)return UPICS[k]||null;return BPICS.has(k)?"pics/"+k+".webp":null}
+function galGrid(){const all=galCards();let L=all;const q=GQ.trim().toLowerCase();if(q)L=L.filter(c=>c.n.toLowerCase().includes(q));
+  if(GF==="missing")L=L.filter(c=>galForms(c).some(f=>!galUrl(c,f)));if(GF==="evo")L=L.filter(c=>EVO.has(c.n));if(GF==="hero")L=L.filter(c=>HERO.has(c.n));
+  let tot=0,got=0;for(const c of all)for(const f of galForms(c)){tot++;if(galUrl(c,f))got++}
+  $("galnote").textContent=`${got} of ${tot} pictures set. Tap a tile to add or change it.`;
+  $("galgrid").innerHTML=L.map(c=>`<div class="grow2"><div class="gname"><span>${esc(c.n)}</span><span class="gcost">${c.c}</span></div><div class="gforms">${galForms(c).map(f=>{const u=galUrl(c,f);const lab=f==="base"?"Normal":f==="evo"?"Evo":"Hero";return `<button type="button" class="gtile ${f}${u?"":" empty"}" data-gid="${c.id}" data-gf="${f}" aria-label="${esc(lab+" "+c.n)}">${u?`<img src="${esc(u)}" alt="" loading="lazy" decoding="async">`:`<span class="plus">+</span>`}<span class="gl">${lab}</span></button>`}).join("")}</div></div>`).join("")||`<p class="hint">No card matches that search.</p>`}
+function renderGallery(){$("out").innerHTML=`<div class="page"><section class="card2"><div class="sbtns"><button class="btn" type="button" id="galback">← Back to More</button></div><h2>Card gallery</h2>
+  <input type="search" class="search" id="galq" placeholder="Search a card" value="${esc(GQ)}" aria-label="Search a card">
+  <div class="chips" style="margin-top:8px">${[["all","All cards"],["missing","Missing a picture"],["evo","Evolutions"],["hero","Heroes"]].map(([k,l])=>`<button class="chip" type="button" data-galf="${k}" aria-pressed="${GF===k}">${l}</button>`).join("")}</div>
+  <p class="hint" id="galnote"></p></section><div class="ggrid" id="galgrid"></div></div>`;
+  galGrid();
+  $("galback").onclick=()=>{GAL=false;renderMore();scrollTo(0,0)};
+  $("galq").oninput=e=>{GQ=e.target.value;galGrid()};
+  $("out").querySelectorAll("[data-galf]").forEach(b=>b.onclick=()=>{GF=b.dataset.galf;$("out").querySelectorAll("[data-galf]").forEach(x=>x.setAttribute("aria-pressed",x===b));galGrid()});
+  $("galgrid").onclick=e=>{const t=e.target.closest(".gtile");if(t)picDialog(+t.dataset.gid,t.dataset.gf)}}
 async function blobToData(b){return await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)})}
 async function saveBackup(){const msg=$("bkmsg");msg.textContent="Preparing…";
   try{const pics={};if(PIDB){const keys=await idbDo(PIDB,"pics","readonly",s=>s.getAllKeys());for(const k of keys){const b=await idbDo(PIDB,"pics","readonly",s=>s.get(k));pics[k]=b?await blobToData(b):null}}
