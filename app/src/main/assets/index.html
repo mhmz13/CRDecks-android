@@ -43,6 +43,8 @@ main{padding:10px 10px calc(var(--nav) + var(--safe-b) + 20px)}
 .gtile .plus{position:absolute;inset:0;display:grid;place-items:center;font-size:1.5rem;color:var(--muted)}
 .gtile .gl{position:absolute;left:0;right:0;bottom:0;font-size:.6rem;font-weight:800;background:rgba(0,0,0,.55);color:#fff;text-align:center;padding:1px 0}
 #labhost{display:block;padding:8px 6px calc(var(--nav) + var(--safe-b) + 16px)}
+#plabhost{display:block;padding:0 0 calc(var(--nav) + var(--safe-b) + 8px)}
+#plabhost[hidden]{display:none}
 .sec{margin:16px 4px 6px;font-weight:900;font-size:1.02rem;color:var(--gold)}
 .secn{margin:0 4px 8px;color:var(--muted);font-size:.8rem}
 .dk{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:10px;content-visibility:auto;contain-intrinsic-size:auto 330px}
@@ -92,7 +94,7 @@ body.editpics .cd{outline:2px dashed var(--gold);outline-offset:-2px}
 .det .row{display:flex;flex-wrap:wrap;gap:6px}
 .empty{color:var(--muted);text-align:center;padding:40px 16px}
 .sentinel{height:1px}
-.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,1fr);background:var(--bg2);border-top:1px solid var(--line);padding-bottom:var(--safe-b);height:calc(var(--nav) + var(--safe-b))}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg2);border-top:1px solid var(--line);padding-bottom:var(--safe-b);height:calc(var(--nav) + var(--safe-b))}
 .nav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.68rem;font-weight:800;color:var(--muted)}
 .nav button span{font-size:1.25rem;line-height:1}
 .nav button[aria-current="page"]{color:var(--gold)}
@@ -143,11 +145,705 @@ label.btn{position:relative;overflow:hidden;display:inline-flex;align-items:cent
 </header>
 <main id="out"></main>
 <div id="labhost" hidden></div>
+<!-- ===== Placement Lab (shadow root keeps its styles apart from the deck pages) ===== -->
+<div id="plabhost" hidden></div>
+<script>
+(()=>{
+const HOST=document.getElementById('plabhost');
+const R=HOST.attachShadow({mode:'open'});
+R.innerHTML=`<style>
+:host{--bg:#0e1424;--panel:#172038;--panel2:#1f2b4a;--line:#2c3a60;--fg:#e9eefc;--mute:#93a0c4;--gold:#f2b632;--good:#3fcf8e;--bad:#ff5d6c;--warn:#ffb648;
+ --display:'Lilita One','Arial Rounded MT Bold',system-ui,sans-serif;--body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,Menlo,monospace;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+.root{background:var(--bg);color:var(--fg);min-height:100%;font-family:var(--body);font-size:15px;line-height:1.45;
+ padding:calc(env(safe-area-inset-top,0px) + 10px) max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0}
+h1{font-size:1.6rem;color:var(--gold)}
+.top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mute{color:var(--mute)}.small{font-size:.85rem}
+button{font:inherit;font-weight:800;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 12px;cursor:pointer}
+button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+button[aria-pressed=true]{background:var(--gold);color:#3a2800;border-color:var(--gold)}
+button.pri{background:var(--gold);color:#3a2800;border-color:var(--gold)}
+button:disabled{opacity:.45;cursor:default}
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp>b{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font-size:.85rem;padding:5px 10px;border-radius:999px}
+.chips button .ok{color:var(--good)}
+.main{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.main{grid-template-columns:1fr}}
+.arena{display:flex;flex-direction:column;gap:8px;align-items:center}
+svg{display:block;width:min(100%,calc((100vh - 230px) * var(--ar)));min-width:260px;height:auto;touch-action:none;border-radius:12px;border:2px solid var(--line);user-select:none;-webkit-user-select:none}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.res h3{font-size:1.25rem}
+.res .g{color:var(--good)}.res .b{color:var(--bad)}.res .w{color:var(--warn)}
+.res ul{margin:0;padding-left:18px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.8rem;color:var(--mute)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.clock{font-family:var(--mono);font-size:.85rem;color:var(--mute)}
+details summary{cursor:pointer;font-weight:800}
+#x{display:none!important}
+.root{padding-top:10px}
+.seg{display:flex;gap:6px}.seg button{border-radius:999px}
+.lessons{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.lesson{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px;border-radius:14px;background:var(--panel)}
+.ltag{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:1px 7px;border-radius:6px;background:var(--panel2);color:var(--mute)}
+.ltag.micro{background:#1d4d3a;color:#8ef0c0}.ltag.macro{background:#4a3a12;color:#ffd77a}.ltag.both{background:#3a2a5a;color:#d4b8ff}
+.q{font-size:1.02rem}.opts{display:flex;flex-direction:column;gap:6px}.opts button{text-align:left}
+.opts button.right{background:#1d4d3a;border-color:var(--good)}.opts button.wrong{background:#4d1d24;border-color:var(--bad)}
+.fb{padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:.92rem}.fb.g{border-color:var(--good)}.fb.w{border-color:var(--warn)}.fb.b{border-color:var(--bad)}
+.fb b{display:block;margin-bottom:2px}.fb.g b{color:var(--good)}.fb.w b{color:var(--warn)}.fb.b b{color:var(--bad)}
+.read p{margin:.4em 0}
+#csvg{margin:0 auto}
+.cardbar{display:flex;gap:6px;width:100%;justify-content:center}
+</style>
+<div class="root"><div class="wrap">
+ <div class="top"><button id="x">← Back to decks</button><div><h1>Placement Lab</h1><div class="mute small">True-scale arena: 18 × 32 tiles. Place, watch it play out, then see every spot that would have worked.</div></div></div>
+ <div class="seg"><button data-mode="drills" aria-pressed="true">Free drills</button><button data-mode="course" aria-pressed="false">Hog 2.6 course</button></div>
+ <div id="drills">
+ <div id="pick" class="grp"></div>
+ <div class="main">
+  <div class="arena">
+   <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+   <div class="ctl" id="ctl"></div>
+   <div class="clock" id="clock"></div>
+  </div>
+  <div class="grp">
+   <div class="panel" id="brief"></div>
+   <div class="panel res" id="res" hidden></div>
+   <div class="legend" id="legend" hidden><span><i style="background:#3fcf8e"></i>Best</span><span><i style="background:#9ad94a"></i>Works</span><span><i style="background:#ffb648"></i>Partial</span><span><i style="background:#ff5d6c"></i>Fails</span></div>
+   <details class="panel"><summary>How the model works</summary><div class="mute small">
+   <p>Arena 18 × 32 tiles. Your princess towers are 3 × 3, the king 4 × 4, the river 2 rows, and the bridges sit in front of the princess towers. Princess range 7.5 tiles, king 7 (the king only fires once activated).</p>
+   <p>Building-targeters walk off the bridge, then always head for the nearest building and lock on once in range. Your building pulls them if it is closer than your tower. The grade counts how many princess towers can hit the attacker where it stops, then time spent under tower fire on the way.</p>
+   <p>The king activates when an enemy's body touches the king tower. Tornado (radius 5.5, about 1 s) drags troops toward its centre. Bandit dashes at a target 3.5 to 6 tiles away and can't be hit during the dash.</p>
+   <p>Stats are tournament-standard (level 11) approximations. Pathing around towers and Tornado pull strength are simplified, so treat the green zones as the shape of the answer, then confirm the exact tile in Training Camp.</p></div></details>
+  </div>
+ </div>
+ </div>
+ <div id="course" class="grp" hidden></div>
+</div></div>`;
+
+/* ---------- arena geometry (tiles, y up from your back wall) ---------- */
+const W=18,H=32,RIV=[15,17];
+const box=(x0,x1,y0,y1,o)=>Object.assign({x0,x1,y0,y1,cx:(x0+x1)/2,cy:(y0+y1)/2},o);
+const PL=box(2,5,5,8,{n:'left princess',kind:'pt',range:7.5}),PR=box(13,16,5,8,{n:'right princess',kind:'pt',range:7.5}),KT=box(7,11,1,5,{n:'king',kind:'kt',range:7});
+const MINE=[PL,PR,KT];
+const EPL=box(2,5,24,27,{n:"their left princess",kind:'ept'}),EPR=box(13,16,24,27,{n:"their right princess",kind:'ept'}),EKT=box(7,11,27,31,{n:'their king',kind:'ekt'});
+const ENEMY=[EPL,EPR,EKT];
+const rd=(p,b)=>{const dx=Math.max(b.x0-p.x,0,p.x-b.x1),dy=Math.max(b.y0-p.y,0,p.y-b.y1);return Math.hypot(dx,dy)}; // point to box edge
+const hyp=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const overlap=(a,b)=>a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1;
+const covers=(t,p,r)=>Math.hypot(t.cx-p.x,t.cy-p.y)-(r||0)<=t.range;
+const DT=0.05,TPULL=5; // Tornado pull speed, tiles/s: calibrated so the standard king-tower cast works
+
+/* ---------- attackers (approx. tournament level) ---------- */
+const ATT={
+ hog:{n:'Hog Rider',ab:'HOG',spd:2,range:.8,r:.6},
+ golem:{n:'Golem',ab:'GOL',spd:.75,range:.75,r:.9},
+ giant:{n:'Giant',ab:'GNT',spd:.75,range:1.2,r:.75},
+ rg:{n:'Royal Giant',ab:'RG',spd:.75,range:5,r:.75},
+ balloon:{n:'Balloon',ab:'BAL',spd:1,range:.1,r:.5,air:1},
+ mk:{n:'Mega Knight',ab:'MK',spd:1,range:1.2,r:.75},
+ skb:{n:'Skeleton Barrel',ab:'SKB',spd:1.5,range:.1,r:.6,air:1},
+ ghost:{n:'Royal Ghost',ab:'GHO',spd:1.5,range:1.2,r:.6}
+};
+
+/* ---------- scenarios ---------- */
+const SC=[
+ {id:'cannon-hog',g:'Buildings',t:'Cannon vs Hog Rider',kind:'build',card:'Cannon',w:2,att:'hog',lane:'L',
+  brief:'Hog Rider is crossing your bridge. Drop a Cannon (2 × 2) where it pulls the Hog off your tower and into range of <b>both</b> princess towers. <br><span class="mute">Heads-up: the Hog 2.6 guide’s standard is 4-2. This model puts the best pull about two rows deeper, so its geometry needs calibrating; trust the guide (see the course) until then.</span>'},
+ {id:'tesla-hog',g:'Buildings',t:'Tesla vs Hog Rider',kind:'build',card:'Tesla',w:2,att:'hog',lane:'R',
+  brief:'Same idea from the other bridge. Tesla is 2 × 2. Pull the Hog so both towers shoot it while it hits the Tesla.'},
+ {id:'cannon-giant',g:'Buildings',t:'Cannon vs Giant',kind:'build',card:'Cannon',w:2,att:'giant',lane:'L',
+  brief:'Giant is slow, so you can pull it a long way. Find the spot that drags it into both towers and keeps it walking under fire longest.'},
+ {id:'inferno-golem',g:'Buildings',t:'Inferno Tower vs Golem',kind:'build',card:'Inferno Tower',w:3,att:'golem',lane:'L',
+  brief:'Inferno Tower is 3 × 3. Pull the Golem to the middle so both towers help while the Inferno ramps up.'},
+ {id:'bomb-rg',g:'Buildings',t:'Bomb Tower vs Royal Giant',kind:'build',card:'Bomb Tower',w:3,att:'rg',lane:'R',
+  brief:'Royal Giant shoots from 5 tiles. Your building has to sit where the RG stops <i>inside</i> both towers\' range, or it out-ranges your pull.'},
+ {id:'tesla-balloon',g:'Buildings',t:'Tesla vs Balloon',kind:'build',card:'Tesla',w:2,att:'balloon',lane:'L',
+  brief:'Balloon flies straight at the nearest building, no bridge needed. Pull it to the middle so both towers hit it.'},
+ {id:'mortar',g:'Buildings',t:'Mortar at the bridge',kind:'mortar',card:'Mortar',w:3,lane:'L',
+  brief:'Offensive Mortar (3 × 3, range 11.5). Place it on your side so it reaches their princess tower in this lane, ideally where your own towers can defend it.'},
+ {id:'tornado-hog',g:'King activation',t:'Tornado the Hog into your king',kind:'tornado',att:'hog',lane:'L',
+  brief:'Press Start. The Hog runs at your tower. Tap the arena to cast Tornado at that moment and position. Drag the Hog\'s body onto the king tower to wake it up.'},
+ {id:'tornado-mk',g:'King activation',t:'Tornado the Mega Knight into your king',kind:'tornado',att:'mk',lane:'R',
+  brief:'Mega Knight walks down the lane. He is slow, so timing is easier but he must end up touching the king tower. Press Start, then tap to cast Tornado.'},
+ {id:'tornado-balloon',g:'King activation',t:'Tornado the Balloon into your king',kind:'tornado',att:'balloon',lane:'L',
+  brief:'Balloon flies straight at your tower. Press Start, then tap to cast Tornado so the pull drags it over your king tower. It is slow, so the window comes late and stays open a little longer.'},
+ {id:'tornado-skb',g:'King activation',t:'Tornado the Skeleton Barrel into your king',kind:'tornado',att:'skb',lane:'R',
+  brief:'Skeleton Barrel flies fast at your tower. Catch it with Tornado before it reaches the tower and drag it onto the king.'},
+ {id:'tornado-ghost',g:'King activation',t:'Tornado the Royal Ghost into your king',kind:'tornado',att:'ghost',lane:'L',
+  brief:'Royal Ghost runs down the lane (invisible until it attacks). It is fast and stops a tile short of the tower, so the window is tight.'},
+ {id:'def-bandit',g:'Defence',t:'Skeletons + Ice Spirit vs Bandit',kind:'def',att:'bandit',goal:'tower',cards:['Skeletons','Ice Spirit'],lane:'L',
+  brief:'Bandit dashes (invulnerable, double damage) at anything 3.5 to 6 tiles away, your tower included. Press Start, pick a card, tap to drop it; then drop the other. Goal: your tower takes zero damage. The guide says Skeletons alone fully counter her.'},
+ {id:'def-mk',g:'Defence',t:'Skeletons + Ice Spirit vs Mega Knight',kind:'def',att:'mk',goal:'tower',cards:['Skeletons','Ice Spirit'],lane:'R',
+  brief:'Mega Knight jumps (splash) at anything 3.5 to 5 tiles away, and his normal hits splash too. Use Skeletons and Ice Spirit to stall and kite him so your tower takes as little as possible. The guide also uses this pair to kite him into your King Tower; this model can’t reproduce that activation yet.'}
+];
+
+/* ---------- simulations ---------- */
+function laneX(l){return l==='L'?3.5:14.5}
+function moveTo(a,p,step){const d=hyp(a,p);if(d<=1e-6)return;const k=Math.min(1,step/d);a.x+=(p.x-a.x)*k;a.y+=(p.y-a.y)*k}
+const nearPt=(b,p)=>({x:Math.min(Math.max(p.x,b.x0),b.x1),y:Math.min(Math.max(p.y,b.y0),b.y1)});
+
+function walkStep(A,a,targets,onBridgeRule){ // returns {tgt,locked}
+ let tgt=null,bd=1e9;for(const b of targets){const d=rd(a,b);if(d<bd){bd=d;tgt=b}}
+ if(bd-A.r<=A.range)return {tgt,locked:true};
+ if(!A.air&&a.y>RIV[0]-.05)a.y-=A.spd*DT;else moveTo(a,nearPt(tgt,a),A.spd*DT);
+ return {tgt,locked:false};
+}
+
+function simBuild(sc,lane,b,rec){
+ const A=ATT[sc.att];const a={x:laneX(lane),y:19.5};const T=[...MINE];if(b)T.push(b);
+ const fr=[];let t=0,tIn=0,res=null;
+ while(t<30){const s=walkStep(A,a,T);
+  if(PL&&(covers(PL,a,A.r)||covers(PR,a,A.r)))tIn+=DT;
+  if(rec)fr.push({t,u:[{x:a.x,y:a.y,ab:A.ab,c:'att'}]});
+  if(s.locked){res=s.tgt;break}t+=DT}
+ const cov=[PL,PR].filter(p=>covers(p,a,A.r)).length;
+ const pulled=res&&res.kind==='card';
+ if(rec){for(let i=0;i<40;i++)fr.push({t:t+i*DT,u:[{x:a.x,y:a.y,ab:A.ab,c:'att',hit:1}]})}
+ return {fr,tgt:res,pulled,cov,tIn,stop:{x:a.x,y:a.y},score:pulled?cov*10+Math.min(tIn,8):0};
+}
+
+function simMortar(sc,lane,b){
+ const c={x:b.cx,y:b.cy};let best=null,bd=1e9;
+ for(const e of ENEMY){const d=rd(c,e);if(d>=3.5&&d<=11.5&&d<bd){bd=d;best=e}}
+ const own=[PL,PR].filter(p=>covers(p,c,1.5)).length;
+ const want=lane==='L'?EPL:EPR;
+ const ok=best===want;
+ return {tgt:best,ok,own,d:bd,score:ok?10+own:best&&best.kind==='ept'?5:0};
+}
+
+function simTornado(sc,lane,cast,rec){
+ const A=ATT[sc.att];const a={x:laneX(lane),y:19.5};const fr=[];let t=0,act=null,hitT=null;
+ while(t<13){
+  const pulling=cast&&t>=cast.t&&t<cast.t+1.05&&hyp(a,cast)<=5.5+A.r;
+  if(pulling){const own={x:a.x,y:a.y};const s=walkStep(A,own,MINE);a.x+=(own.x-a.x)*.2;a.y+=(own.y-a.y)*.2;if(hyp(a,cast)>.15)moveTo(a,cast,TPULL*DT)}
+  else{const s=walkStep(A,a,MINE);if(s.locked&&s.tgt.kind==='pt'&&hitT==null&&!act)hitT=t;if(s.locked&&s.tgt===KT&&!act)act=t}
+  if(!act&&rd(a,KT)<=A.r)act=t;
+  if(rec)fr.push({t,u:[{x:a.x,y:a.y,ab:A.ab,c:'att'}],torn:cast&&t>=cast.t&&t<cast.t+1.05?cast:null,king:act!=null});
+  if(act!=null&&t>act+1.2)break;
+  if(hitT!=null&&t>hitT+2&&!(cast&&t<cast.t+1.05))break;
+  t+=DT}
+ return {fr,act,hitT,score:act!=null?(hitT==null||act<hitT?100:70):0};
+}
+
+/* ---------- defence sim: Bandit / Mega Knight vs your Skeletons and Ice Spirit (approx. tournament level 11) ---------- */
+const DEF={
+ bandit:{n:'Bandit',ab:'BAN',hp:906,dmg:193,hs:1,spd:1.5,r:.4,range:.75,band:[3.5,6],mode:'dash',verb:'dashed'},
+ mk:{n:'Mega Knight',ab:'MK',hp:3300,dmg:222,hs:1.7,spd:1,r:.75,range:1.2,band:[3.5,5],mode:'jump',splash:1.3,jsplash:2.2,jdmg:444,verb:'jumped'}};
+const KDMG=109;
+function simDef(sc,lane,casts,rec){
+ const D=DEF[sc.att];const a={x:laneX(lane),y:19.5,hp:D.hp,atk:.5,mv:null,cd:0,frz:0};
+ const units=[];const tw=[{...PL,cd:0},{...PR,cd:0}];let kcd=0;const fr=[];let t=0,towerDmg=0,act=null,leaps=0,leapsDef=0,frozen=0;const done=new Set();
+ const cs=(casts||[]).slice().sort((x,y)=>x.t-y.t);const nDef=cs.reduce((n,c)=>n+(c.card==='Skeletons'?3:1),0);
+ const isBld=o=>o.x0!=null;
+ while(t<18&&a.hp>0){
+  for(const c of cs)if(!done.has(c)&&t>=c.t){done.add(c);
+   if(c.card==='Skeletons')[[0,.5],[-.45,-.3],[.45,-.3]].forEach(([dx,dy])=>units.push({k:'sk',x:c.x+dx,y:c.y+dy,hp:81,dep:1,cd:.3}));
+   else units.push({k:'is',x:c.x,y:c.y,hp:190,dep:.3})}
+  const live=units.filter(u=>u.hp>0);const dashing=a.mv&&D.mode==='dash';
+  for(const p of tw){p.cd-=DT;if(!dashing&&covers(p,a,D.r)&&p.cd<=0&&a.y<RIV[1]){a.hp-=KDMG;p.cd=.8}}
+  if(act!=null){kcd-=DT;if(!dashing&&Math.hypot(KT.cx-a.x,KT.cy-a.y)-D.r<=7&&kcd<=0){a.hp-=KDMG;kcd=1}}
+  for(const u of live){if(u.dep>0){u.dep-=DT;continue}
+   if(u.k==='sk'){const d=hyp(u,a)-.3-D.r;if(d<=.5){u.cd-=DT;if(u.cd<=0&&!dashing){a.hp-=81;u.cd=1}}else if(!a.mv||D.mode!=='dash')moveTo(u,a,1.5*DT)}
+   else{const d=hyp(u,a)-D.r;if(d<=.5&&!dashing){a.frz=Math.max(a.frz,1.1);a.hp-=91;u.hp=0;frozen++}else moveTo(u,a,(d<=2.5?4:2)*DT)}}
+  if(a.frz>0&&!a.mv)a.frz-=DT;
+  else if(a.mv){const m=a.mv;m.t+=DT;const k=Math.min(1,m.t/m.T);a.x=m.sx+(m.tx-m.sx)*k;a.y=m.sy+(m.ty-m.sy)*k;
+   if(k>=1){if(D.mode==='dash'){const tg=m.tg;if(isBld(tg)){towerDmg+=D.dmg*2;if(tg===KT&&act==null)act=t}else tg.hp-=D.dmg*2}
+    else{for(const u of units)if(u.hp>0&&hyp(u,a)<=D.jsplash)u.hp-=D.jdmg;for(const p of [PL,PR])if(rd(a,p)<=D.jsplash)towerDmg+=D.jdmg;if(rd(a,KT)<=D.jsplash&&act==null)act=t}
+    a.mv=null;a.cd=D.mode==='dash'?.8:2.5;a.atk=D.hs*.4}}
+  else{a.cd-=DT;
+   const C=[...live.map(u=>({o:u,d:hyp(u,a)-.3-D.r})),...[PL,PR,KT].map(o=>({o,d:rd(a,o)-D.r}))];let best=C[0];for(const c of C)if(c.d<best.d)best=c;
+   if(a.y>RIV[0]-.05)a.y-=D.spd*DT;
+   else if(best.d>=D.band[0]&&best.d<=D.band[1]&&a.cd<=0){const p=isBld(best.o)?nearPt(best.o,a):best.o;const L=hyp(a,p);const ux=(p.x-a.x)/L,uy=(p.y-a.y)/L;const stop=isBld(best.o)?D.r:.3+D.r*.5;
+    a.mv={sx:a.x,sy:a.y,tx:p.x-ux*stop,ty:p.y-uy*stop,t:0,T:D.mode==='dash'?Math.max(.15,L/8):1,tg:best.o};leaps++;if(!isBld(best.o))leapsDef++}
+   else if(best.d<=D.range){a.atk-=DT;if(a.atk<=0){a.atk=D.hs;const o=best.o;
+     if(isBld(o)){towerDmg+=D.dmg;if(o===KT&&act==null)act=t}else{o.hp-=D.dmg;if(D.splash)for(const u of live)if(u!==o&&hyp(u,o)<=D.splash)u.hp-=D.dmg}}}
+   else moveTo(a,isBld(best.o)?nearPt(best.o,a):best.o,D.spd*DT)}
+  if(act==null&&rd(a,KT)<=D.r)act=t;
+  if(rec)fr.push({t,u:[{x:a.x,y:a.y,ab:D.ab,c:a.mv?'dash':a.frz>0?'frz':'att',hp:a.hp/D.hp},...units.filter(u=>u.hp>0).map(u=>({x:u.x,y:u.y,ab:'',c:u.k,dep:u.dep>0}))],king:act!=null});
+  if(act!=null&&sc.goal==='king'&&t>act+2.5)break;
+  t+=DT}
+ if(rec&&a.hp<=0)for(let i=0;i<20;i++)fr.push({t:t+i*DT,u:units.filter(s=>s.hp>0).map(s=>({x:s.x,y:s.y,ab:'',c:s.k})),dead:{x:a.x,y:a.y},king:act!=null});
+ const killed=a.hp<=0,lost=units.filter(u=>u.hp<=0).length;
+ const score=sc.goal==='king'?(act!=null?1000+Math.max(0,600-towerDmg):Math.max(1,600-towerDmg)/3):Math.max(1,1500-towerDmg-(killed?0:500)+(act!=null?30:0));
+ return {fr,killed,towerDmg,act,leaps,leapsDef,lost,nDef,frozen,hpLeft:Math.max(0,a.hp),score};
+}
+
+/* ---------- placement validity ---------- */
+function bldAt(p,w){let x0,y0;if(w===2){x0=Math.round(p.x-1);y0=Math.round(p.y-1)}else{x0=Math.floor(p.x)-1;y0=Math.floor(p.y)-1}
+ const b=box(x0,x0+w,y0,y0+w,{kind:'card'});const ok=x0>=0&&x0+w<=W&&y0>=0&&y0+w<=RIV[0]&&!MINE.some(m=>overlap(m,b));return {b,ok}}
+function troopOk(p){return p.x>=.3&&p.x<=W-.3&&p.y>=.3&&p.y<=RIV[0]-.3&&!MINE.some(m=>rd(p,m)<.2)}
+const snapT=p=>({x:Math.floor(p.x)+.5,y:Math.floor(p.y)+.5});
+const snapS=p=>({x:Math.round(p.x*2)/2,y:Math.round(p.y*2)/2});
+
+/* ---------- state ---------- */
+const st={sc:SC[0],lane:'L',speed:1,ranges:true,heat:false,phase:'place',prev:null,place:null,res:null,base:null,fr:null,pt:0,raf:0,casts:[],used:new Set(),card:null,heatData:null,bm:null};
+let BEST={};try{BEST=JSON.parse(localStorage.getItem('crplace-best')||'{}')}catch(_){}
+const saveBest=(id,g)=>{if(!BEST[id]||g>BEST[id]){BEST[id]=g;try{localStorage.setItem('crplace-best',JSON.stringify(BEST))}catch(_){}}};
+const $=id=>R.getElementById(id);
+const svg=$('svg');const NS='http://www.w3.org/2000/svg';
+const E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- drawing ---------- */
+function view(){const full=st.sc.kind==='mortar';return full?{y0:0,y1:32}:{y0:0,y1:22}}
+const SY=y=>H-y;
+function drawStatic(){
+ const v=view();svg.setAttribute('viewBox',`0 ${H-v.y1} ${W} ${v.y1-v.y0}`);svg.style.setProperty('--ar',W/(v.y1-v.y0));
+ let s='';
+ for(let x=0;x<W;x++)for(let y=0;y<H;y++){if(y>=RIV[0]&&y<RIV[1])continue;s+=`<rect x="${x}" y="${SY(y+1)}" width="1" height="1" fill="${(x+y)%2?'#5f9e3c':'#68a843'}"/>`}
+ s+=`<rect x="0" y="${SY(RIV[1])}" width="${W}" height="2" fill="#3a8fd1"/>`;
+ for(const bx of [2,13])s+=`<rect x="${bx}" y="${SY(RIV[1])-.1}" width="3" height="2.2" fill="#a07a4a" stroke="#6d5030" stroke-width=".08"/>`;
+ // tile grid lines on your half for counting
+ for(let x=1;x<W;x++)s+=`<line x1="${x}" x2="${x}" y1="${SY(15)}" y2="${SY(0)}" stroke="rgba(0,0,0,.12)" stroke-width=".03"/>`;
+ for(let y=1;y<15;y++)s+=`<line x1="0" x2="${W}" y1="${SY(y)}" y2="${SY(y)}" stroke="rgba(0,0,0,.12)" stroke-width=".03"/>`;
+ const tw=(b,col,lab)=>`<rect x="${b.x0+.1}" y="${SY(b.y1)+.1}" width="${b.x1-b.x0-.2}" height="${b.y1-b.y0-.2}" rx=".35" fill="${col}" stroke="rgba(0,0,0,.4)" stroke-width=".1"/><text x="${b.cx}" y="${SY(b.cy)+.3}" font-size=".85" text-anchor="middle" fill="#fff" font-family="Lilita One,sans-serif">${lab}</text>`;
+ s+=tw(PL,'#3a6fd8','P')+tw(PR,'#3a6fd8','P')+`<g id="king">${tw(KT,'#2b55b3','K')}</g>`;
+ s+=tw(EPL,'#c94545','P')+tw(EPR,'#c94545','P')+tw(EKT,'#a83434','K');
+ s+=`<g id="rng"></g><g id="heat"></g><g id="dyn"></g><g id="prev"></g>`;
+ svg.innerHTML=s;drawRanges();
+}
+function drawRanges(){const g=svg.querySelector('#rng');if(!g)return;g.innerHTML=st.ranges?[PL,PR].map(p=>`<circle cx="${p.cx}" cy="${SY(p.cy)}" r="${p.range}" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.45)" stroke-width=".07" stroke-dasharray=".3 .25"/>`).join('')+`<circle cx="${KT.cx}" cy="${SY(KT.cy)}" r="${KT.range}" fill="none" stroke="rgba(255,215,90,.35)" stroke-width=".06" stroke-dasharray=".15 .3"/>`:''}
+const HC=['#ff5d6c','#ffb648','#9ad94a','#3fcf8e'];
+function drawHeat(){const g=svg.querySelector('#heat');if(!g)return;if(!st.heat||!st.heatData){g.innerHTML='';$('legend').hidden=true;return}
+ $('legend').hidden=false;const H_=st.heatData;const mx=Math.max(...H_.map(h=>h.s),0);
+ g.innerHTML=H_.map(h=>{let c;if(h.s<=0){if(st.sc.kind==='tornado'||st.sc.kind==='def')return '';c=HC[0]}else if(h.s>=mx-1e-6)c=HC[3];else if(h.c!=null)c=HC[h.c];else if(h.s>=mx*.75)c=HC[2];else c=HC[1];
+  return `<rect x="${h.x-.45}" y="${SY(h.y)-.45}" width=".9" height=".9" rx=".15" fill="${c}" opacity="${h.s<=0?.18:.62}"/>`}).join('');
+}
+function unitSVG(u){
+ if(u.c==='sk')return `<circle cx="${u.x}" cy="${SY(u.y)}" r=".32" fill="${u.dep?'rgba(240,240,240,.5)':'#f1f1f1'}" stroke="#333" stroke-width=".07"/>`;
+ if(u.c==='is')return `<circle cx="${u.x}" cy="${SY(u.y)}" r=".38" fill="${u.dep?'rgba(150,220,255,.5)':'#8fdcff'}" stroke="#1d5f80" stroke-width=".08"/>`;
+ const col=u.c==='dash'?'#ffe66b':u.c==='frz'?'#8fdcff':'#e2503f';const r=u.ab==='GOL'?.9:u.ab==='HOG'?.6:u.ab==='MK'?.8:.7;
+ let s=`<circle cx="${u.x}" cy="${SY(u.y)}" r="${r}" fill="${col}" stroke="#4a0f0f" stroke-width=".1" ${u.c==='dash'?'stroke-dasharray=".2 .1"':''}/>`+
+  `<text x="${u.x}" y="${SY(u.y)+.22}" font-size=".55" text-anchor="middle" fill="${u.c==='att'?'#fff':'#222'}" font-weight="800" font-family="Nunito,sans-serif">${u.ab}</text>`;
+ if(u.hp!=null)s+=`<rect x="${u.x-.7}" y="${SY(u.y)-1.15}" width="1.4" height=".22" fill="#300"/><rect x="${u.x-.7}" y="${SY(u.y)-1.15}" width="${1.4*Math.max(0,u.hp)}" height=".22" fill="#ff5d6c"/>`;
+ return s}
+function drawFrame(f){const g=svg.querySelector('#dyn');if(!g)return;let s='';
+ if(st.place&&st.place.b){const b=st.place.b;s+=`<rect x="${b.x0+.05}" y="${SY(b.y1)+.05}" width="${b.x1-b.x0-.1}" height="${b.y1-b.y0-.1}" rx=".25" fill="#8a7a62" stroke="#f2b632" stroke-width=".12"/><text x="${b.cx}" y="${SY(b.cy)+.25}" font-size=".6" text-anchor="middle" fill="#fff" font-weight="800">${E(st.sc.card.split(' ')[0].slice(0,4).toUpperCase())}</text>`;
+  if(st.sc.kind==='mortar'){s+=`<circle cx="${b.cx}" cy="${SY(b.cy)}" r="11.5" fill="none" stroke="#f2b632" stroke-width=".08" stroke-dasharray=".4 .3"/><circle cx="${b.cx}" cy="${SY(b.cy)}" r="3.5" fill="rgba(255,93,108,.12)" stroke="#ff5d6c" stroke-width=".05"/>`;
+   if(st.res&&st.res.tgt)s+=`<line x1="${b.cx}" y1="${SY(b.cy)}" x2="${st.res.tgt.cx}" y2="${SY(st.res.tgt.cy)}" stroke="#ffe66b" stroke-width=".12" stroke-dasharray=".3 .2"/>`}}
+ if(f){if(f.torn)s+=`<circle cx="${f.torn.x}" cy="${SY(f.torn.y)}" r="5.5" fill="rgba(160,190,255,.22)" stroke="#bcd0ff" stroke-width=".1"/><circle cx="${f.torn.x}" cy="${SY(f.torn.y)}" r=".25" fill="#bcd0ff"/>`;
+  for(const u of f.u)s+=unitSVG(u);if(f.dead)s+=`<text x="${f.dead.x}" y="${SY(f.dead.y)+.3}" font-size="1" text-anchor="middle">💥</text>`;
+  const k=svg.querySelector('#king rect');if(k)k.setAttribute('fill',f.king?'#f2b632':'#2b55b3')}
+ for(const c of st.casts)s+=`<circle cx="${c.x}" cy="${SY(c.y)}" r=".18" fill="#fff" stroke="#111" stroke-width=".05"/>`;
+ g.innerHTML=s;
+}
+const timedK=k=>k==='tornado'||k==='def';
+const canCast=()=>st.sc.kind==='tornado'?st.casts.length===0:st.sc.kind==='def'?!!st.card&&!st.used.has(st.card):false;
+function drawPrev(){const g=svg.querySelector('#prev');if(!g)return;const p=st.prev;if(!p){g.innerHTML='';return}const k=st.sc.kind;let s='';
+ if(k==='build'||k==='mortar'){if(st.phase!=='place'){g.innerHTML='';return}const {b,ok}=bldAt(p,st.sc.w);s=`<rect x="${b.x0}" y="${SY(b.y1)}" width="${b.x1-b.x0}" height="${b.y1-b.y0}" fill="${ok?'rgba(242,182,50,.35)':'rgba(255,93,108,.35)'}" stroke="${ok?'#f2b632':'#ff5d6c'}" stroke-width=".08"/>`}
+ else if(st.phase==='running'&&canCast()){if(k==='tornado'){const q=snapS(p);s=`<circle cx="${q.x}" cy="${SY(q.y)}" r="5.5" fill="rgba(188,208,255,.12)" stroke="#bcd0ff" stroke-width=".07" stroke-dasharray=".3 .2"/>`}
+  else{const q=snapT(p);const ok=troopOk(q);const D=DEF[st.sc.att];
+   s=`<circle cx="${q.x}" cy="${SY(q.y)}" r="${st.card==='Ice Spirit'?1.5:.8}" fill="${ok?'rgba(255,255,255,.2)':'rgba(255,93,108,.3)'}" stroke="${ok?'#fff':'#ff5d6c'}" stroke-width=".06"/>`+
+    D.band.map(r=>`<circle cx="${q.x}" cy="${SY(q.y)}" r="${r+.3+D.r}" fill="none" stroke="rgba(255,230,107,.55)" stroke-width=".05" stroke-dasharray=".2 .2"/>`).join('')}}
+ g.innerHTML=s}
+
+/* ---------- UI ---------- */
+function drawPick(){const gs=[...new Set(SC.map(s=>s.g))];
+ $('pick').innerHTML=gs.map(g=>`<b>${g}</b><div class="chips">${SC.filter(s=>s.g===g).map(s=>`<button data-sc="${s.id}" aria-pressed="${s===st.sc}">${E(s.t)}${BEST[s.id]?` <span class="ok">${BEST[s.id]>=3?'★':'✓'}</span>`:''}</button>`).join('')}</div>`).join('')}
+function drawCtl(){const k=st.sc.kind,timed=timedK(k);
+ const lane=`<button data-lane="L" aria-pressed="${st.lane==='L'}">Left lane</button><button data-lane="R" aria-pressed="${st.lane==='R'}">Right lane</button>`;
+ let main='';
+ if(timed)main=st.phase==='place'?`<button class="pri" data-act="start">Start</button>`:st.phase==='running'?`<button data-act="reset">Restart</button>`:`<button class="pri" data-act="start">Try again</button>`;
+ else main=st.phase==='place'?`<button class="pri" data-act="go" ${st.place&&st.place.ok?'':'disabled'}>Go</button>`:`<button class="pri" data-act="reset">Try again</button>`;
+ const cards=k==='def'&&st.phase!=='done'?`<span class="cardbar">${st.sc.cards.map(c=>`<button data-card="${c}" aria-pressed="${st.card===c}" ${st.used.has(c)?'disabled':''}>${c==='Skeletons'?'💀':'❄️'} ${c}</button>`).join('')}</span>`:'';
+ const spd=timed?`<button data-act="speed">${st.speed===1?'1×':'½×'} speed</button>`:'';
+ const heat=st.heatData?`<button data-act="heat" aria-pressed="${st.heat}">Show every spot</button>`:'';
+ $('ctl').innerHTML=cards+lane+main+spd+heat+`<button data-act="ranges" aria-pressed="${st.ranges}">Ranges</button>`;
+ let tip='';
+ if(st.phase==='done')tip='';
+ else if(k==='build'||k==='mortar')tip=st.place?(st.place.ok?'Tap Go, or tap elsewhere to move it.':'Can\'t place there.'):'Tap or drag on your side of the arena.';
+ else if(st.phase==='place')tip=k==='def'?'Press Start. Pick a card above, tap the arena to drop it, then drop the other one.':'Press Start, then tap the arena to cast.';
+ else tip=canCast()?(k==='tornado'?'Tap to cast Tornado.':`Tap to drop ${st.card}. Yellow rings: if ${DEF[st.sc.att].n} is between them, ${DEF[st.sc.att].mode==='dash'?'she dashes':'he jumps'} at it.`):'';
+ $('clock').textContent=tip;
+}
+function drawBrief(){const s=st.sc;$('brief').innerHTML=`<h3>${E(s.t)}</h3><div class="small">${s.brief}</div>`}
+
+function heatBuild(){const out=[];const w=st.sc.w;
+ for(let x=0;x<W;x++)for(let y=0;y<RIV[0];y++){const p=w===2?{x:x+1,y:y+1}:{x:x+.5,y:y+.5};const {b,ok}=bldAt(p,w);if(!ok)continue;
+  const r=st.sc.kind==='mortar'?simMortar(st.sc,st.lane,b):simBuild(st.sc,st.lane,b,false);out.push({x:b.cx,y:b.cy,s:r.score,b,c:st.sc.kind==='mortar'?(r.ok?2:r.score>0?1:0):(!r.pulled?0:r.cov===2?2:1)})}
+ const seen=new Set();return out.filter(h=>{const k=h.x+','+h.y;if(seen.has(k))return false;seen.add(k);return true})}
+function heatTimed(){const out=[];const k=st.sc.kind;
+ if(k==='tornado'){const T=st.casts[0].t;for(let x=.5;x<W;x+=1)for(let y=.5;y<22;y+=1){const r=simTornado(st.sc,st.lane,{t:T,x,y},false);out.push({x,y,s:r.score})}}
+ else{const last=st.casts[st.casts.length-1],rest=st.casts.slice(0,-1);
+  for(let x=.5;x<W;x+=1)for(let y=.5;y<RIV[0];y+=1){const p={x,y};if(!troopOk(p))continue;const r=simDef(st.sc,st.lane,[...rest,{...last,x,y}],false);out.push({x,y,s:r.score})}}
+ return out}
+/* the best tile = top score; ties go to the tile with the most top-scoring neighbours (the most forgiving spot) */
+function pickBest(H){if(!H||!H.length)return null;const mx=Math.max(...H.map(h=>h.s));if(mx<=0)return null;const top=H.filter(h=>h.s>=mx-1e-6);
+ let b=null,bn=-1;for(const h of top){const n=top.filter(o=>Math.abs(o.x-h.x)<=1.01&&Math.abs(o.y-h.y)<=1.01).length;if(n>bn){bn=n;b=h}}return {...b,mx,n:top.length,nb:bn}}
+/* tornado: scan every moment for the widest working window */
+function bestMoment(){const base=simTornado(st.sc,st.lane,null,true);const end=Math.min(13,(base.hitT!=null?base.hitT:base.fr.length*DT)+1.5);let best=null;
+ for(let T=0;T<=end;T+=.25){const H=[];for(let x=.5;x<W;x+=1)for(let y=.5;y<22;y+=1){const r=simTornado(st.sc,st.lane,{t:T,x,y},false);H.push({x,y,s:r.score})}
+  const n=H.filter(h=>h.s>=100).length;if(n&&(!best||n>best.n)){const pb=pickBest(H);const f=base.fr[Math.min(base.fr.length-1,Math.round(T/DT))].u[0];best={T,n,p:pb,at:{x:f.x,y:f.y}}}}
+ return best}
+/* plain-language tile names: guide-style r-c (rows behind the river, columns in from the lane tower's inner edge) */
+function tileName(p,lane){if(p.y>=RIV[1])return `on their side, ${Math.floor(p.y-RIV[1])} rows past the river, column ${Math.floor(p.x)+1} from the left`;
+ if(p.y>=RIV[0])return `on the river, column ${Math.floor(p.x)+1} from the left`;
+ const r=Math.floor(RIV[0]-p.y-.001),L=lane||(p.x<9?'L':'R');const c=L==='L'?Math.floor(p.x)-5:12-Math.floor(p.x);
+ const side=L==='L'?'left':'right';
+ return c>=0?`tile ${r}-${c} (${r} row${r===1?'':'s'} behind the river, ${c} column${c===1?'':'s'} in from the ${side} tower)`:`${r} row${r===1?'':'s'} behind the river, ${-c} column${c===-1?'':'s'} outside the ${side} tower's inner edge`}
+const fpName=(b,lane)=>{const r=RIV[0]-b.y1,L=lane;const c=L==='L'?b.x0-5:13-b.x1;return c>=0?`${r}-${c}`:`${r} rows back, ${-c} outside the tower edge`};
+function drawBestMark(B){const g=svg.querySelector('#heat');if(!g||!B)return;let s='';
+ if(B.b)s=`<rect x="${B.b.x0}" y="${SY(B.b.y1)}" width="${B.b.x1-B.b.x0}" height="${B.b.y1-B.b.y0}" fill="none" stroke="#3fcf8e" stroke-width=".18"/>`;
+ else if(st.sc.kind==='tornado')s=`<circle cx="${B.x}" cy="${SY(B.y)}" r="5.5" fill="none" stroke="#3fcf8e" stroke-width=".08" stroke-dasharray=".3 .2"/>`;
+ s+=`<text x="${B.x}" y="${SY(B.y)+.35}" font-size="1.1" text-anchor="middle" fill="#3fcf8e" stroke="#0e1424" stroke-width=".05">★</text>`;
+ g.insertAdjacentHTML('beforeend',s)}
+
+function grade(score,max){if(max<=0)return 0;const f=score/max;return score<=0?0:f>=.999?3:f>=.75?2:1}
+const GL=['<span class="b">Miss</span>','<span class="w">Partial</span>','<span class="g">Good</span>','<span class="g">Best spot ★</span>'];
+function defLines(r,D,nCasts){let h=`<li>${D.n} ${r.killed?'died':'survived with '+Math.round(r.hpLeft)+' HP'}. Tower took <b>${r.towerDmg}</b> damage.</li>`;
+ if(r.leapsDef)h+=`<li class="w">${D.mode==='dash'?'She':'He'} ${D.verb} onto your units ${r.leapsDef}×${D.mode==='dash'?' (invulnerable, double damage)':', splashing everything within 2 tiles'}.</li>`;
+ if(r.frozen)h+=`<li>Ice Spirit froze ${D.n}.</li>`;if(nCasts)h+=`<li>${r.lost} of ${r.nDef} of your units died.</li>`;if(r.act!=null)h+=`<li>Your King Tower activated.</li>`;return h}
+
+function showRes(){const r=st.res,k=st.sc.kind,s=st.sc;const box_=$('res');box_.hidden=false;
+ const mx=st.heatData?Math.max(...st.heatData.map(h=>h.s)):0;const g=grade(r.score,mx);saveBest(s.id,g);drawPick();
+ const B=pickBest(st.heatData);let h=`<h3>${GL[g]}</h3><ul class="small">`,bx='';
+ if(k==='build'){const A=ATT[s.att];
+  if(!r.pulled)h+=`<li>${A.n} ignored your ${s.card} and locked onto your <b>${r.tgt?r.tgt.n:'tower'}</b>. It was closer than your building when the ${A.n} chose.</li>`;
+  else h+=`<li>${A.n} locked onto your ${s.card} (${fpName(st.place.b,st.lane)}). Where it stopped, <b>${r.cov} of 2</b> princess towers reach it, with ${r.tIn.toFixed(1)} s under tower fire on the way.</li>`;
+  if(B){const R=simBuild(s,st.lane,B.b,false);bx=`<b>Best tile: ${fpName(B.b,st.lane)}</b> (green outline). ${A.n} locks onto the ${s.card} at ${tileName(R.stop,st.lane)}, where <b>${R.cov} of 2</b> princess towers reach it, after ${R.tIn.toFixed(1)} s walking under fire. ${R.cov===2?'Further toward your tower and only one tower reaches the stop point; further toward the river and the attacker reaches the building sooner, with less time under fire.':(A.n==='Hog Rider'?'No spot gets both towers on the Hog in this model, yet the 2.6 guide says a 4-2 Cannon does. That points to my arena geometry (tower positions or how range is measured) being off, so treat this spot as approximate.':'No spot here gets both towers on it in this model.')} ${B.n>1?`${B.n} spots tie; the star is the one with the most equally good neighbours, so a one-tile slip still works.`:'Only this exact spot reaches the top score.'}`}}
+ if(k==='mortar'){if(!r.tgt)h+=`<li>Nothing in range. Mortar reaches 11.5 tiles and can't hit anything closer than 3.5.</li>`;
+  else h+=`<li>Mortar locks onto <b>${r.tgt.n}</b>${r.ok?'':' — not the lane you picked'}. ${r.own} of your princess towers can defend it.</li>`;
+  if(B){const R=simMortar(s,st.lane,B.b);bx=`<b>Best tile: Mortar centred ${tileName({x:B.x,y:B.y},st.lane)}</b>. It reaches ${R.tgt?R.tgt.n:'their tower'} at ${R.d.toFixed(1)} of 11.5 tiles and ${R.own} of your towers cover it. Any deeper and their tower is out of range; any wider and your own tower stops covering it.`}}
+ if(k==='tornado'){const A=ATT[s.att];const c=st.casts[0];
+  if(!c)h+=`<li>No Tornado cast.</li>`;
+  else if(r.act!=null)h+=`<li>King activated at ${r.act.toFixed(1)} s.</li>`+(r.hitT!=null&&r.hitT<r.act?`<li class="w">But the ${A.n} hit your tower first, at ${r.hitT.toFixed(1)} s. Cast earlier.</li>`:'');
+  else h+=`<li>The ${A.n} never touched the king tower.</li>`;
+  if(c&&B)bx=`<b>Best tile at your moment (${c.t.toFixed(1)} s): Tornado centred ${tileName(B,st.lane)}</b>. The pull ends with the ${A.n}'s body on the king tower. ${B.n} tile${B.n===1?'':'s'} work${B.n===1?'s':''} at that moment.`;
+  else if(c)bx=`<b>No tile works at ${c.t.toFixed(1)} s.</b> ${c.t<(st.bm?st.bm.T:99)?'You cast too early: the Tornado ends before it can drag the body onto the king.':'You cast too late.'}`;
+  if(st.bm)bx+=`<br><br><b>Best moment overall: ${st.bm.T.toFixed(2)} s</b>, when the ${A.n} is at ${tileName(st.bm.at,st.lane)}. Cast centred ${tileName(st.bm.p,st.lane)}. That moment has the widest window: ${st.bm.n} working tiles. Centre the Tornado between the ${A.n} and the king's ${st.lane==='L'?'left':'right'} corner so the 5.5-tile pull drags it diagonally onto the tower.`}
+ if(k==='def'){const D=DEF[s.att];const n=st.casts.length;
+  if(!n)h+=`<li>No cards dropped.</li>`;h+=defLines(r,D,n);
+  if(n&&B){const last=st.casts[n-1];const R=simDef(s,st.lane,[...st.casts.slice(0,-1),{...last,x:B.x,y:B.y}],false);
+   bx=`<b>Best tile for your ${last.card} at ${last.t.toFixed(1)} s: ${tileName(B,st.lane)}</b>${n>1?` (keeping your ${st.casts.slice(0,-1).map(c=>c.card).join(', ')} where you put ${n>2?'them':'it'})`:''}. Result there: tower takes ${R.towerDmg}, ${D.n} ${R.killed?'dies':'survives'}${R.leapsDef?`, ${D.verb} onto your units ${R.leapsDef}×`:`, never ${D.verb} onto your units`}. `+
+    (D.mode==='dash'?`The trick: drop them closer than 3.5 tiles to where she'll be, or so far she walks into them, never 3.5–6 away, or she dashes through invulnerable.`:`The trick: keep your units out of his 3.5–5 tile jump band, or he lands on all of them at once.`)}}
+ if(bx)h+=`</ul><div class="fb g" style="margin-top:6px">${bx}</div>`;else h+='</ul>';
+ box_.innerHTML=h;drawBestMark(B);
+}
+
+function stopAnim(){cancelAnimationFrame(st.raf);st.raf=0}
+function play(fromT,onEnd){stopAnim();let last=performance.now();st.pt=fromT;
+ const step=now=>{const dt=Math.min(.1,(now-last)/1000)*st.speed;last=now;st.pt+=dt;const fr=st.fr;const i=Math.min(fr.length-1,Math.floor(st.pt/DT));drawFrame(fr[i]);
+  if(st.phase==='running'&&timedK(st.sc.kind)&&canCast())$('clock').textContent=`${st.pt.toFixed(1)} s · tap to ${st.sc.kind==='tornado'?'cast Tornado':'drop '+st.card}`;
+  if(i>=fr.length-1){st.raf=0;onEnd&&onEnd();return}st.raf=requestAnimationFrame(step)};
+ st.raf=requestAnimationFrame(step)}
+
+function simNow(rec){const k=st.sc.kind;return k==='tornado'?simTornado(st.sc,st.lane,st.casts[0]||null,rec):simDef(st.sc,st.lane,st.casts,rec)}
+function setScenario(sc){stopAnim();st.sc=sc;st.lane=sc.lane;reset()}
+function reset(){stopAnim();Object.assign(st,{phase:'place',prev:null,place:null,res:null,casts:[],used:new Set(),card:st.sc.cards?st.sc.cards[0]:null,heat:false,heatData:null,fr:null,bm:null});
+ $('res').hidden=true;$('legend').hidden=true;drawStatic();drawPick();drawBrief();
+ const k=st.sc.kind;
+ if(timedK(k))drawFrame(simNow(true).fr[0]);
+ else{const A=ATT[st.sc.att];if(A)drawFrame({u:[{x:laneX(st.lane),y:19.5,ab:A.ab,c:'att'}]});else drawFrame(null)}
+ drawCtl()}
+function start(){reset();st.phase='running';const r=simNow(true);st.fr=r.fr;drawCtl();play(0,()=>finishTimed())}
+function cast(p){const k=st.sc.kind;const q=k==='tornado'?snapS(p):snapT(p);if(k==='def'&&!troopOk(q))return;
+ st.casts.push({t:st.pt,x:q.x,y:q.y,card:k==='def'?st.card:'Tornado'});if(k==='def'){st.used.add(st.card);st.card=st.sc.cards.find(c=>!st.used.has(c))||null}
+ const r=simNow(true);st.fr=r.fr;st.res=r;drawPrev();drawCtl();play(st.pt,()=>finishTimed())}
+function finishTimed(){stopAnim();st.res=simNow(false);st.phase='done';$('clock').textContent='Working out the best tile…';
+ setTimeout(()=>{st.heatData=st.casts.length?heatTimed():null;if(st.sc.kind==='tornado')st.bm=bestMoment();st.heat=false;drawCtl();showRes()},30)}
+
+function go(){if(!st.place||!st.place.ok)return;st.phase='running';drawPrev();
+ st.heatData=heatBuild();
+ if(st.sc.kind==='mortar'){st.res=simMortar(st.sc,st.lane,st.place.b);st.phase='done';drawFrame(null);drawCtl();showRes();return}
+ const r=simBuild(st.sc,st.lane,st.place.b,true);st.res=r;st.fr=r.fr;drawCtl();
+ st.speed=1;play(0,()=>{st.phase='done';drawCtl();showRes()})}
+
+
+/* ================= Hog 2.6 course (built from the Hog 2.6 Masterclass) ================= */
+const C$=id=>R.getElementById(id);
+const pickR=a=>a[Math.floor(Math.random()*a.length)];
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+let CP={};try{CP=JSON.parse(localStorage.getItem('hog26-course')||'{}')}catch(_){}
+const saveCP=()=>{try{localStorage.setItem('hog26-course',JSON.stringify(CP))}catch(_){}};
+const COST={'Hog Rider':4,'Musketeer':4,'Cannon':3,'Ice Golem':2,'Ice Spirit':1,'Skeletons':1,'Fireball':4,'The Log':2};
+const DECK=Object.keys(COST);
+
+/* guide notation: rows of gap from the river, then columns of gap from the left princess tower's inner edge (Cannon = 2 × 2) */
+const NOTE=(n,mir)=>{const [r,c]=n.split('-').map(Number);const b={x0:5+c,x1:7+c,y0:13-r,y1:15-r};return mir?mirR(b):b};
+const mirR=b=>({x0:W-b.x1,x1:W-b.x0,y0:b.y0,y1:b.y1});
+const Z=(x0,x1,y0,y1)=>({x0,x1,y0,y1});
+const inZ=(p,z)=>p.x>=z.x0&&p.x<=z.x1&&p.y>=z.y0&&p.y<=z.y1;
+
+/* zones read off the guide's diagram descriptions (left lane; mirrored for right-lane questions) */
+const ZONES={
+ musFront:{z:Z(7,11,5,7),n:'in front of the King Tower'},
+ musBehind:{z:Z(7,11,0,1),n:'behind the King Tower'},
+ musSide:{z:Z(0,1.5,7,12),n:'at the side of the arena'},
+ musCorner:{z:Z(0,2,0,2),n:'in the corner'},
+ musSnipe:{z:Z(5,9,13,15),n:'the center snipe strip just behind the river'},
+ musXbow:{z:Z(0,1,10,13),n:'the X-Bow snipe tile at the outer edge'},
+ musAntiT:{z:Z(2,5,1,5),n:'directly behind your Princess Tower'},
+ autoPig:{z:Z(0,1,14,15),n:'the outermost tile against the river'},
+ skBandit:{z:Z(2,5,8,10),n:'in front of your Princess Tower'},
+ skEwiz:{z:Z(2.5,4.5,12,14),n:'where E-Wiz stops to hit your tower (about 5 tiles in front of it)'},
+ isDart:{z:Z(2,5,14,15),n:'one of the tiles right in front of the bridge'},
+ isBandit:{z:Z(5,6.5,8,9.5),n:'just beside and in front of your Princess Tower'},
+ isEdrag:{z:Z(5,7,4,8),n:'between your King and Princess Tower'}
+};
+
+/* ---------- arena markup for course items ---------- */
+function arenaMarkup(y1){let s='';
+ for(let x=0;x<W;x++)for(let y=0;y<y1;y++){if(y>=RIV[0]&&y<RIV[1])continue;s+=`<rect x="${x}" y="${SY(y+1)}" width="1" height="1" fill="${(x+y)%2?'#5f9e3c':'#68a843'}"/>`}
+ s+=`<rect x="0" y="${SY(RIV[1])}" width="${W}" height="2" fill="#3a8fd1"/>`;
+ for(const bx of [2,13])s+=`<rect x="${bx}" y="${SY(RIV[1])-.1}" width="3" height="2.2" fill="#a07a4a" stroke="#6d5030" stroke-width=".08"/>`;
+ for(let x=1;x<W;x++)s+=`<line x1="${x}" x2="${x}" y1="${SY(15)}" y2="${SY(0)}" stroke="rgba(0,0,0,.14)" stroke-width=".03"/>`;
+ for(let y=1;y<15;y++)s+=`<line x1="0" x2="${W}" y1="${SY(y)}" y2="${SY(y)}" stroke="rgba(0,0,0,.14)" stroke-width=".03"/>`;
+ const tw=(b,col,lab)=>`<rect x="${b.x0+.1}" y="${SY(b.y1)+.1}" width="${b.x1-b.x0-.2}" height="${b.y1-b.y0-.2}" rx=".35" fill="${col}" stroke="rgba(0,0,0,.4)" stroke-width=".1"/><text x="${b.cx}" y="${SY(b.cy)+.3}" font-size=".85" text-anchor="middle" fill="#fff" font-family="Lilita One,sans-serif">${lab}</text>`;
+ s+=tw(PL,'#3a6fd8','P')+tw(PR,'#3a6fd8','P')+tw(KT,'#2b55b3','K');
+ if(y1>24)s+=tw(EPL,'#c94545','P')+tw(EPR,'#c94545','P')+tw(EKT,'#a83434','K');
+ return s}
+const rectSVG=(b,fill,stroke,extra='')=>`<rect x="${b.x0}" y="${SY(b.y1)}" width="${b.x1-b.x0}" height="${b.y1-b.y0}" fill="${fill}" stroke="${stroke}" stroke-width=".12" rx=".15" ${extra}/>`;
+const dot=(p,c,lab)=>`<circle cx="${p.x}" cy="${SY(p.y)}" r=".45" fill="${c}" stroke="#111" stroke-width=".08"/>${lab?`<text x="${p.x}" y="${SY(p.y)+.2}" font-size=".5" text-anchor="middle" fill="#111" font-weight="800">${lab}</text>`:''}`;
+
+/* ---------- MCQ bank (paraphrased from the masterclass) ---------- */
+const MC=(q,a,w,why)=>({type:'mc',q,a,w,why});
+const BANK={
+plan:[
+ MC('What is Hog 2.6’s basic plan?','Defend cheaply, then Hog when they can’t answer it',['Build one big push every double elixir','Spam Hog every time you reach 4 elixir','Win by Fireball cycling from the first second'],'It is a chip deck that wins by outplaying: cheap defence, then Hog when they’re low, their counter is out of cycle, or they’ve committed in the other lane.'),
+ MC('Which three cards should you save for what the opponent does?','Cannon, Musketeer, Fireball',['Hog, Skeletons, Ice Spirit','Ice Golem, The Log, Skeletons','Hog, Fireball, The Log'],'Skeletons, Ice Spirit and Hog can go down unprovoked; Cannon, Musketeer and Fireball are reactive.'),
+ MC('Against X-Bow, which card should you hold back?','Ice Golem',['Skeletons','The Log','Musketeer'],'Ice Golem is your X-Bow tank. Hold The Log against Log Bait.'),
+ MC('What do the small cards (Ice Golem, Ice Spirit, Skeletons) mainly do on defence?','Buy time so Cannon and Musketeer can shoot the push down',['Deal most of the defensive damage','Bait out their spells','Activate your King Tower every time'],'They kite and stall; Cannon and Musketeer are the ranged DPS.'),
+ MC('Musketeer must take how much damage in a defence?','Zero. One stray hit lets Fireball kill her',['Up to half her HP','It doesn’t matter if she gets a hit off','As much as the tower would have taken'],'She barely survives Fireball, so even one Skeleton or Bat hit puts her in Fireball range.'),
+ MC('“Musketeer first, kite second” or “kite first, Musketeer second”?','Musketeer first, then kite',['Kite first, then Musketeer','Always both at once','Never kite with Musketeer down'],'The guide calls it a Musketeer-cycle deck too: get her down early, kite around her.'),
+ MC('The guide’s generic big-push defence is…','Cannon 4-3, Musketeer at the arena edge, cycle cards above the Cannon',['Cannon and Musketeer side by side in front of the King','Musketeer at the bridge, Cannon at 0-2','Ice Golem tanking at the tower, Fireball the push'],'Keep Musketeer and Cannon apart so one spell can’t hit both; kite toward Cannon, away from Musketeer.')
+],
+open:[
+ MC('Which opener does the guide rate as bad?','Ice Golem + Hog blind',['Cycle Ice Spirit','Leak 1–2 elixir with Hog in hand, then Hog the opposite lane','Cycle toward Cannon if it isn’t in hand'],'Don’t open Ice Golem + Hog without information about their deck.'),
+ MC('You open with Hog. What follows about 1 second later, if your hand can still kite?','Skeletons or Ice Spirit',['Fireball on the tower','Musketeer at the bridge','Nothing, ever'],'The follow-up gets value against splash and Tornado, but only play it if you can still defend the counterpush.'),
+ MC('Why is cycling The Log as an opener only safe with Fireball in hand?','Graveyard / Log Bait could punish you for losing Log',['Log is your only Hog card','It costs too much early','It activates their King'],'Without Log and without Fireball you have little answer to Graveyard or Goblin Barrel spells.'),
+ MC('Why does the guide open Hog into the left lane?','The opponent’s trophy number hides a corner building’s health bar there',['Left towers have less HP','Hog walks faster on the left','The Log reaches further on the left'],'Opening left discourages a corner building there; if they place one anyway, your Fireball hits it and the tower.')
+],
+cannon:[
+ MC('Your default Cannon against almost every win condition is…','4-2',['0-3','5-0','7-3'],'4-2 is the standard. Use something else only for a specific reason.'),
+ MC('Giant / Goblin Giant deck with Fireball. Which placement keeps your Cannon out of Fireball range?','3-3',['4-2','0-2','4-1'],'3-3 is the anti-Fireball placement against Giant-type decks.'),
+ MC('Royal Giant + Lightning, or a big tank at the bridge with Earthquake. Cannon?','0-3',['4-3','5-0','4-2'],'0-3 sits at the river so the spell can’t hit Cannon and your towers together.'),
+ MC('LavaLoon or Miner Balloon: Balloon placed normally. Cannon?','0-2',['4-3','3-3','5-0'],'0-2 pulls a Balloon from any position. Use 0-1 against the Balloon + Bats/Minions trick.'),
+ MC('Graveyard, or you’re late with Cannon against a Hog. Cannon?','5-0',['4-1','0-2','3-3'],'5-0 sits right beside the tower and catches late Hogs and Rams.'),
+ MC('Why never use 4-1 against Hog Rider?','Hog famously bypasses that spot',['It is out of tower range','It gets hit by The Log','It activates their King'],'4-1 is only for a bypass-position Balloon. For a late Cannon vs Hog, use 5-0.'),
+ MC('When is 4-3 (maximum pull) safe?','When nothing can bypass it: Golem from the back, an unpushed Giant',['Against every Hog','Against bypass-position Balloon','Against Lightning decks'],'It pulls tanks furthest, but only when they can’t walk past it.'),
+ MC('Double-Cannon Balloon pull to the King: second Cannon goes…','7-3, directly in front of the King Tower',['0-2 at the river','5-0 beside the tower','behind the King Tower'],'First Cannon 4-1 (or 3-1), second at 7-3 drags the Balloon toward the King.')
+],
+mus:[
+ MC('Against a push led by a big ground tank, where does Musketeer usually go?','Side of the arena, away from a central Cannon',['In front of the King next to the Cannon','At the bridge','On top of the tank'],'Spreading them stops Lightning or Poison hitting both.'),
+ MC('Golem dropped in the back. First Musketeer response?','Corner placement (delayed, spell-safe)',['Bridge snipe','In front of the King','Behind the Princess Tower'],'Corner is the delayed version of the side placement.'),
+ MC('Musketeer can snipe enemy buildings placed how close to the river?','3 tiles or fewer',['Anywhere on their side','Only on the bridge','5 tiles or fewer'],'From the center snipe strip she reaches buildings 3 or fewer tiles from the river.'),
+ MC('Against Lava Miner, why put Musketeer behind the King Tower?','She still reaches the other Princess Tower’s area',['She’s safe from Lava pups only there','It activates the King','It baits Fireball'],'From behind the King she covers both lanes; a side placement doesn’t.')
+],
+hog:[
+ MC('Ice Golem + Hog against a Tornado deck: which side should the Hog be on?','The outer side, with Ice Golem between it and the King',['The inner side, toward the King','Directly in front of the Ice Golem','It doesn’t matter'],'On the inner side, a Tornado drags the Hog to the King Tower.'),
+ MC('Why trail Skeletons well behind the Hog against Tornado?','A normally timed Tornado misses them, and they hit the tower while the Hog is at the King',['They tank for the Hog','They activate your King','They block Log'],'Too early and the Tornado catches them; done right, the opponent loses either way.'),
+ MC('Against Mega Knight or P.E.K.K.A, should you normally play Ice Golem + Hog?','No. Both stop it and you lose your defensive Ice Golem',['Yes, always','Only in single elixir','Yes, with Fireball'],'Exception: a surviving Ice Golem or overtime, using the auto-pig-push version so the Hog runs ahead.'),
+ MC('What does the auto pig push do?','Hog hops the river corner and takes a wider path past misplaced buildings',['Hog jumps the King Tower','Hog ignores Tornado','Hog gets double damage'],'Play it on the outermost tile against the river.'),
+ MC('In the “famous” Ice Golem + Hog, the Hog goes…','On the same tile, about 1 second after the Ice Golem',['Before the Ice Golem','On the opposite bridge','Two tiles in front of the Ice Golem'],'The Ice Golem walks a bit ahead, so the Hog lands just behind it. Great when Hog is your next card.')
+],
+when:[
+ MC('They commit a card in the left lane. Your default Hog?','Opposite (right) lane',['Same lane, behind your defence','Wait for double elixir','Hog + Fireball same lane'],'Opposite lane means their elixir is tied up on your side.'),
+ MC('Unsure whether you’re ahead in elixir?','Build to 10 instead of Hogging at 4',['Hog anyway, it’s only 4','Fireball their tower','Play Ice Golem to check'],'After a Hog or Fireball you are often behind without noticing.'),
+ MC('Once you start Fireball cycling…','Stop playing Hog',['Play Hog every time Fireball is down','Hog + Fireball together','Save Fireball for the Hog'],'Fireball cycling replaces Hog as the win condition; mixing them wastes elixir.'),
+ MC('Best moment for Hog damage in double elixir?','Right after they’ve defended, during their counterpush',['At the start of double elixir no matter what','Only when they have 10 elixir','Never in double elixir'],'They have just spent elixir defending; you can also kite with the Hog.'),
+ MC('The guide’s view on Hog + Fireball (8 elixir)?','Usually an overcommit, so stop doing it so often',['The main way to win','Only good in single elixir','Always correct after defending'],'Many hog counters are spell-proof (P.E.K.K.A, Prince, Mega Knight). Exception: punishing a player who only plays 4-2 Cannons, at 7–8 elixir.')
+],
+tech:[
+ MC('Skeletons fully counter which two cards, per the guide?','Bandit and Electro Wizard',['Valkyrie and Bowler','Baby Dragon and Wizard','P.E.K.K.A and Prince'],'Big positive trades. Ice Spirit fully counters Hunter.'),
+ MC('Which card does Ice Spirit fully counter?','Hunter',['Bandit','Mega Knight','Witch'],'Ice Spirit fully counters Hunter.'),
+ MC('Surrounding with Skeletons works on every splasher except…','Valkyrie, a charging Dark Prince, Baby Dragon',['Wizard, Witch, Executioner','Bowler, Bomber, Firecracker','Every splasher kills them'],'Use the surround time to freeze with Ice Spirit.'),
+ MC('Three Skeletons on a tank vs Cannon or Musketeer: who out-DPSes?','The Skeletons',['Cannon','Musketeer','They’re equal'],'Put Skeletons on tanks.'),
+ MC('Miner control in double elixir: what resets the Miner?','Ice Spirit',['The Log','Cannon','Ice Golem'],'Save Ice Spirit to reset the Miner.'),
+ MC('Opponent uses Cannoneer as tower troop. Where do you cycle Ice Spirit?','In the back, not at the bridge',['At the bridge, as usual','On their tower','Never'],'At the bridge it does no damage once in Cannoneer range; in the back it still discourages pushes.')
+],
+king:[
+ MC('Activate your King Tower against Mega Knight with…','Skeletons + Ice Spirit (or Cannon + Ice Spirit)',['Fireball','The Log alone','Ice Golem between the towers'],'Watch whether Ice Spirit freezes MK; it changes the jump timing.'),
+ MC('Against a supported Mega Knight, what ruins the Skeletons + Ice Spirit activation?','Dropping Ice Golem between the towers to tank the support',['Playing Musketeer after','Using Cannon 4-2','Logging the support'],'If you need Ice Golem, put it at the arena edge or much higher up.'),
+ MC('Electro Dragon activation?','Ice Spirit or Ice Golem between your King and Princess Tower',['Fireball the E-Dragon','Cannon at 0-2','Skeletons at the bridge'],'With a 4-2 Cannon down, put it between the Cannon and the King.'),
+ MC('Bandit activation?','Skeletons + Ice Spirit',['The Log','Musketeer behind the King','Cannon 5-0'],'Rated easy in the guide.'),
+ MC('Mortar activation is “very hard” because…','The Mortar must fire before your Skeletons start moving',['Mortar out-ranges your King','Skeletons die to Mortar','You need Fireball too'],'Release your activation cards within the Mortar’s reload-timer window.')
+],
+spell:[
+ MC('A good Fireball, per the guide?','Three units, or two units plus the tower',['Tower plus one unit','Any Fireball on the tower','Only an Elixir Collector'],'Prefer two units over tower + one unit.'),
+ MC('Fireball tower damage at tournament standard?','207',['159','300','400'],'207 at tournament standard, 300 at max level. Effectively worth far more when it lets the Hog land extra hits.'),
+ MC('Should you prediction-Fireball blind?','No. Predict once you’ve seen their deck',['Yes, every Hog','Only in single elixir','Only against Skeleton Army'],'Many players run spell-proof hog counters.'),
+ MC('Fireballing an Elixir Collector: when?','Immediately, or not at all',['After two more cards','Only in overtime','At the end of single elixir'],'A late Fireball lets them replace the pump while your Fireball is out of cycle.')
+],
+dbl:[
+ MC('“Play aggressively in single elixir” for 2.6?','Matchup-dependent; don’t overcommit',['Always true','Always false','Only with Ice Golem + Hog'],'Healthy towers on both sides until double elixir are common.'),
+ MC('In double elixir, Cannon is used…','Far more, because pushes are bigger',['Less','Only at 4-1','Never on defence'],'And Hog can go down during their attack, not only opposite-lane.'),
+ MC('2.6 mirror: whoever Fireballs first…','Is the first to get outcycled',['Wins the Cannon war','Always gets a tower','Should Hog immediately after'],'If they Fireball, outcycle them; they must defend without Cannon.'),
+ MC('Mirror: they only ever play 4-2 Cannons. Punish with…','Hog + Fireball at 7–8 elixir',['Ice Golem + Hog','Musketeer snipe','Log cycling only'],'Fireball hits Cannon and tower; a Fireballed Cannon dies to one Hog hit.'),
+ MC('Mirror: they play high Cannons to dodge Fireball. You…','Send Musketeer to the river to snipe it',['Fireball it anyway','Ignore it','Ice Golem + Hog the other lane'],'Musketeer reaches buildings 3 or fewer tiles from the river.'),
+ MC('Mirror: defending a Hog + Fireball with a 4-2 Cannon. You need…','Two of: Ice Spirit, Log, Skeletons, Musketeer, to hold the Hog in the two-tower zone',['Nothing extra','A second Cannon','Ice Golem on the Hog'],'Freeze or knock the Hog back before it reaches the Cannon, outside the Fireball radius.')
+]};
+
+/* ---------- tap / sequence items ---------- */
+const TAPN=(n,why)=>({type:'fp',n,q:`Tap where the <b>${n}</b> Cannon goes.`,why});
+const TAPZ=(k,q,why)=>({type:'zone',k,q,why});
+const SEQ=(id,q,ig,hog,dmin,dmax,why)=>({type:'seq',id,q,ig,hog,dmin,dmax,why});
+const LESSONS=[
+ {id:'plan',t:'The plan',tag:'Macro',read:['Hog 2.6 wins by outplaying, not brute force. Defend cheaply, then send Hog when they can’t answer it: they are low, their counter is out of cycle, or they’ve committed in the other lane.','Cannon, Musketeer and Fireball are reactive. Skeletons, Ice Spirit and Hog can go down unprovoked. Never play lone cards: combos make the deck.'],items:()=>BANK.plan},
+ {id:'open',t:'Opening plays',tag:'Macro',read:['Best openers: cycle to Cannon if it isn’t in hand; cycle Ice Spirit; or, with Hog in hand, leak 1–2 elixir and answer their first card with Hog in the opposite lane.','Avoid: Ice Golem + Hog blind, Hog + Fireball/Log, leading with Musketeer, Cannon or Fireball.'],items:()=>[gOpener(),gOpener(),gOpener(),gCycle(),gCycle(),...BANK.open]},
+ {id:'cannon',t:'Cannon placements',tag:'Micro',read:['Notation: rows back from the river, then columns in from the left Princess Tower. 4-2 means four tiles behind the river and two tiles in from the tower.','Right-lane questions are mirrored: count in from the right tower.'],items:()=>[TAPN('4-2','The default.'),TAPN('4-3','Maximum pull, one tile further to the center.'),TAPN('3-3','Anti-Fireball vs Giant-type decks; pulls both lanes.'),TAPN('0-3','At the river: Lightning/EQ can’t hit Cannon + tower.'),TAPN('0-2','The Balloon pull.'),TAPN('5-0','Graveyard and late Cannon vs Hog.'),TAPN('4-1','Bypass-position Balloon only. Never vs Hog.'),TAPN('7-3','The second Cannon of the double-Cannon pull, right in front of the King.'),...BANK.cannon,gMatchCannon(),gMatchCannon()]},
+ {id:'mus',t:'Musketeer placements',tag:'Micro',read:['Keep Musketeer and Cannon apart unless their big spell is gone. In front of the King covers both lanes; the side and corner keep her out of one spell with the Cannon.'],items:()=>[TAPZ('musFront','Small single-elixir push, their spells are out of cycle. Tap the Musketeer spot that covers both lanes.','In front of the King Tower.'),TAPZ('musSide','Big ground-tank push, Cannon may also come down. Tap the spell-safe Musketeer spot.','Side of the arena, away from a central Cannon.'),TAPZ('musCorner','Golem dropped in the back. Tap the delayed first Musketeer spot.','The corner.'),TAPZ('musSnipe','They placed a building 2 tiles from the river. Tap where Musketeer snipes it from.','The center strip just behind the river.'),TAPZ('musXbow','X-Bow protected by Tesla. Tap the X-Bow snipe tile.','Outer edge, a few tiles back from the river, outside Tesla range.'),TAPZ('musAntiT','Beatdown with Tornado. Tap the anti-Tornado Musketeer area.','Directly behind your Princess Tower.'),TAPZ('musBehind','Lava Miner. Tap where Musketeer still covers the other Princess Tower.','Behind the King Tower.'),...BANK.mus]},
+ {id:'hog',t:'Hog offence',tag:'Micro',read:['Auto pig push: Hog on the outermost tile against the river hops the corner and dodges misplaced buildings.','Ice Golem + Hog: two taps. Watch the timing: about 1 second between them for the famous, Vinny and anti-building versions.'],items:()=>[TAPZ('autoPig','Tap an auto pig push tile in this lane.','The outermost tile against the river.'),
+   SEQ('classic','Classical Ice Golem + Hog: Ice Golem in the middle of the bridge, Hog directly behind it, almost immediately.',{x:3.5,y:14.5},{x:3.5,y:13.5},0,.6,'Both cards nearly together; needs both in hand.'),
+   SEQ('famous','The “famous” variation: both on the same bridge tile, Hog about 1 second after the Ice Golem.',{x:3.5,y:14.5},{x:3.5,y:14.5},.7,1.5,'The Ice Golem walks ahead, the Hog lands just behind.'),
+   SEQ('vinny','Vinny’s variation: Ice Golem mid-bridge, then 1 second later Hog one tile back and one tile toward the outer edge.',{x:3.5,y:14.5},{x:2.5,y:13.5},.7,1.5,'Hog sits near the edge, hard to push to the inner side and Tornado.'),
+   SEQ('bldg','Against Inferno Tower: Ice Golem at the bridge, then 1 second later Hog on the auto pig push tile.',{x:3.5,y:14.5},{x:.5,y:14.5},.7,1.5,'The building locks onto the Ice Golem; the Hog pushes it in.'),
+   SEQ('mk','Overtime vs Mega Knight with a spare Ice Golem: Ice Golem on the outer side of the bridge, 1 second later Hog on the auto pig push tile.',{x:2.5,y:14.5},{x:.5,y:14.5},.7,1.5,'The Hog jumps ahead; the tower targets the Ice Golem.'),
+   ...BANK.hog]},
+ {id:'when',t:'When to send Hog',tag:'Macro',read:['The last 4 cards they played are the only cards they can’t have in hand. Track their Hog counters against that.','Opposite-lane Hog when they commit. Unsure about elixir? Build to 10.'],items:()=>[gCounter(),gCounter(),gCounterBack(),gSafe(),gSafe(),gElixir(),gElixir(),...BANK.when]},
+ {id:'tech',t:'Skeletons & Ice Spirit tech',tag:'Micro',read:['Know which of their troops your 1-elixir cards counter outright. Skeletons beat Bandit and E-Wiz; Ice Spirit beats Hunter and resets Miner.'],items:()=>[TAPZ('skBandit','Bandit coming down this lane. Tap the guide’s Skeleton spot to catch her.','In front of the Princess Tower.'),TAPZ('skEwiz','Electro Wizard walking to your tower. Tap where the Skeletons go.','The tile where E-Wiz stops to attack; the top Skeleton nudges it back.'),TAPZ('isDart','Dart Goblin at the bridge. Tap an Ice Spirit tile.','Either tile right in front of the bridge.'),TAPZ('isBandit','Emergency: Bandit about to reach your tower, only Ice Spirit in hand. Tap the tile.','Just beside and in front of the Princess Tower.'),...BANK.tech]},
+ {id:'king',t:'King Tower activations',tag:'Both',read:['Activate your King whenever it’s cheap. Most activations use Skeletons and Ice Spirit. The Placement Lab drills show the opponent’s Tornado version.'],items:()=>[TAPZ('isEdrag','Electro Dragon coming down this lane. Tap where Ice Spirit goes to activate your King.','Between the King and Princess Tower.'),...BANK.king]},
+ {id:'spell',t:'Spells',tag:'Both',read:['Fireball radius 2.5 tiles. Two units beat tower + one unit. Three units, or two units + tower, is a good Fireball.'],items:()=>[gFireball(),gFireball(),gFireball(),gFireball(),...BANK.spell]},
+ {id:'dbl',t:'Single vs double elixir & the mirror',tag:'Macro',read:['Single elixir: matchup-dependent, don’t overcommit, opposite-lane Hog. Double: more Cannon, Hog during their attack, and increasingly Fireball cycling.','Mirror: Cannon is the only real Hog counter. Outcycle it.'],items:()=>BANK.dbl}
+];
+
+/* ---------- generators ---------- */
+function gOpener(){const d0=shuf(DECK);const hand=d0.slice(0,4),nxt=d0[4];
+ const has=c=>hand.includes(c);let right,why;
+ if(!has('Cannon')){const cyc=has('Skeletons')?'Skeletons in the back':has('Ice Spirit')?'Ice Spirit at the bridge':has('The Log')&&has('Fireball')?'The Log (safe: Fireball in hand)':null;
+  right=cyc?`Cycle ${cyc} to reach Cannon`:'Leak 1–2 elixir and answer their first card';why=cyc?'No Cannon in hand: you’re open to a fast Hog or similar. Cycle cheap cards to reach it before they hit 10 elixir.':'No cheap cycle card and Log isn’t safe without Fireball, so wait.'}
+ else if(has('Hog Rider')){right='Wait, leak 1–2 elixir, then Hog the opposite lane to their first card';why='Hog in hand with Cannon safe: the top-ladder opener.'}
+ else if(has('Ice Spirit')){right='Cycle Ice Spirit at the bridge';why='Cannon is in hand, no Hog. Ice Spirit is the cheapest pressure and tells you if they ignore chip.'}
+ else{right='Skeletons in the back, to pair with the Hog later';why='Cannon in hand; slow-cycle toward Hog.';if(!has('Skeletons')){right='Leak 1–2 elixir and answer their first card';why='Nothing cheap to cycle; don’t lead with Musketeer, Cannon or Fireball.'}}
+  const wrongs=['Ice Golem + Hog at the bridge','Musketeer in the back','Fireball their tower','Hog + The Log together','Cannon in the middle right away'].filter(w=>w!==right);
+ return {type:'mc',q:`Start of the match. Your hand: <b>${hand.join(', ')}</b>. Next: ${nxt}. Best first play?`,a:right,w:shuf(wrongs).slice(0,3),why}}
+function gCycle(){const d=shuf(DECK.filter(c=>c!=='Cannon'));const q=1+Math.floor(Math.random()*4);const hand=d.slice(0,4);const queue=d.slice(4);queue.splice(q-1,0,'Cannon');
+ return {type:'mc',q:`Hand: <b>${hand.join(', ')}</b>. Queue: ${queue.map((c,i)=>i===0?'<b>next: '+c+'</b>':c).join(' → ')}. How many cards must you play before Cannon is in hand?`,a:String(q),w:['1','2','3','4'].filter(x=>x!==String(q)),why:`Each play pulls the next card into your hand. Cannon is number ${q} in the queue, so ${q} play${q>1?'s':''}. Cheapest way: ${hand.filter(c=>COST[c]<=2&&!(c==='The Log'&&!hand.includes('Fireball'))).sort((a,b)=>COST[a]-COST[b]).slice(0,q).join(', ')||'your cheapest cards'}.`}}
+const OPP=[
+ {n:'Log Bait',cards:['Goblin Barrel','Princess','Goblin Gang','Inferno Tower','Knight','Rocket','The Log','Ice Spirit'],ctr:['Inferno Tower','Knight']},
+ {n:'P.E.K.K.A Bridge Spam',cards:['P.E.K.K.A','Battle Ram','Bandit','Royal Ghost','Electro Wizard','Magic Archer','Poison','Zap'],ctr:['P.E.K.K.A','Electro Wizard']},
+ {n:'Golem Night Witch',cards:['Golem','Night Witch','Baby Dragon','Lumberjack','Tornado','Lightning','Mega Minion','Barbarian Barrel'],ctr:['Lumberjack','Mega Minion']},
+ {n:'2.9 X-Bow',cards:['X-Bow','Tesla','Archers','Knight','Skeletons','Ice Spirit','Fireball','The Log'],ctr:['Tesla','Knight']},
+ {n:'Mega Knight bait',cards:['Mega Knight','Miner','Bats','Spear Goblins','Goblin Gang','Skeleton Barrel','Zap','Fireball'],ctr:['Mega Knight','Goblin Gang']}];
+function oppPlays(o,n){const d=shuf(o.cards);const hand=d.slice(0,4),q=d.slice(4);const out=[];for(let i=0;i<n;i++){const c=pickR(hand);hand.splice(hand.indexOf(c),1);q.push(c);hand.push(q.shift());out.push(c)}return out}
+const playsTxt=p=>p.map((c,i)=>i>=p.length-4?`<b>${c}</b>`:c).join(' → ');
+function gCounter(){const o=pickR(OPP);const p=oppPlays(o,6+Math.floor(Math.random()*4));const c=pickR(o.ctr);const last4=p.slice(-4);const inH=!last4.includes(c);
+ return {type:'mc',q:`${o.n}. Their plays, oldest → newest: ${playsTxt(p)}. Is <b>${c}</b> in their hand?`,a:inH?'Yes':'No',w:[inH?'No':'Yes','Can’t tell'],why:`Only the last 4 cards played (bold) can be out of their hand. ${c} ${inH?'isn’t':'is'} among them.`}}
+function gCounterBack(){const o=pickR(OPP);let p,c,j;do{p=oppPlays(o,7+Math.floor(Math.random()*3));c=pickR(o.ctr);j=p.slice(-4).indexOf(c)}while(j<0);const back=j+1;
+ return {type:'mc',q:`${o.n}. Plays: ${playsTxt(p)}. How many more cards must they play before <b>${c}</b> is back in their hand?`,a:String(back),w:['1','2','3','4'].filter(x=>x!==String(back)),why:`${c} is ${['oldest','2nd','3rd','newest'][j]} of the last 4. Each new play pushes the queue: it returns after ${back} more.`}}
+function gSafe(){const o=pickR(OPP);const p=oppPlays(o,8+Math.floor(Math.random()*3));const l4=p.slice(-4);const out=o.ctr.filter(c=>l4.includes(c));const safe=out.length===o.ctr.length;
+ return {type:'mc',q:`${o.n}. Their Hog counters: <b>${o.ctr.join(' and ')}</b>. Plays: ${playsTxt(p)}. You and they are even on elixir. Hog now?`,a:safe?'Yes, both counters are out of cycle':'No, wait for the counter to be played',w:[safe?'No, wait for the counter to be played':'Yes, both counters are out of cycle','Only with Fireball too'],why:safe?`${o.ctr.join(' and ')} are both in the last 4. The window closes with every card they play.`:`${o.ctr.filter(c=>!l4.includes(c)).join(' and ')} could still be in their hand.`}}
+function gElixir(){const ev=[['Hog Rider',4,'Cannon',3],['Goblin Barrel',3,'The Log',2],['Golem',8,'Skeletons',1],['P.E.K.K.A',7,'Ice Golem',2],['Bandit',3,'Skeletons',1],['Hunter',4,'Ice Spirit',1],['X-Bow',6,'Ice Golem',2],['Royal Giant',6,'Cannon',3]];
+ const n=2+Math.floor(Math.random()*2);let you=0;const L=[];for(let i=0;i<n;i++){const e=pickR(ev);L.push(`They play ${e[0]} (${e[1]}), you defend with ${e[2]} (${e[3]})`);you+=e[1]-e[3]}
+ const own=Math.random()<.5?4:0;if(own){L.push('Then you send Hog Rider (4) and they answer with Knight (3)');you+=-1}
+ const opts=[you,you+1,you-1,you+2].map(v=>(v>0?'+':'')+v);
+ return {type:'mc',q:`Both started even. ${L.join('. ')}. Your elixir lead now?`,a:opts[0],w:opts.slice(1),why:`Add up (their cost − your cost) each time: ${you>0?'+':''}${you}.${you>=2?' A lead this size is a Hog window if their counter is out of cycle.':' Not a big lead: track counters before going.'}`}}
+const MATCH=[['Royal Giant Lightning','0-3'],['LavaLoon (Balloon placed normally)','0-2'],['Graveyard Poison','5-0'],['Giant with Fireball','3-3'],['Golem placed behind the King Tower','4-3'],['Giant Sparky','4-2'],['Royal Hogs Earthquake','0-3']];
+function gMatchCannon(){const [m,ans]=pickR(MATCH);const all=['4-2','4-3','3-3','0-3','0-2','5-0','4-1'];
+ return {type:'mc',q:`Opponent: <b>${m}</b>. Which Cannon placement?`,a:ans,w:shuf(all.filter(x=>x!==ans)).slice(0,3),why:`The guide’s pick for this matchup is ${ans}.`}}
+const FB_SETS=[
+ [['Musketeer',.5],['Musketeer',.5],['Musketeer',.5]],
+ [['Wizard',.5],['Witch',.5],['Giant',.75]],
+ [['Princess',.5],['Goblin Gang',.6],['Dart Goblin',.4]],
+ [['Elixir Collector',1],['Musketeer',.5]],
+ [['Night Witch',.5],['Baby Dragon',.7],['Lumberjack',.5]],
+ [['Archers',.6],['X-Bow',1.5],['Tesla',1]]];
+function gFireball(){const set=pickR(FB_SETS);const u=[];const cx=2+Math.random()*14,cy=20+Math.random()*7;for(const [n,r] of set){let p,ok=0,g=0;while(!ok&&g++<300){const sp=g<150?3.2:6;p={x:Math.min(17.3,Math.max(.7,cx+(Math.random()*2-1)*sp)),y:Math.min(31,Math.max(17.8,cy+(Math.random()*2-1)*sp))};ok=!ENEMY.some(e=>rd(p,e)<r+.2)&&!u.some(o=>hyp(o,p)<r+o.r+.3)}u.push({...p,n,r})}
+ return {type:'fb',q:`Tap where your Fireball lands. Radius 2.5 tiles. Their units: ${set.map(s=>s[0]).join(', ')}.`,units:u,why:'Value: 2 per unit hit, 1 for the tower. Two units beat tower + one unit; three units or two + tower is a good Fireball.'}}
+const fbVal=(p,u)=>{const hit=u.filter(o=>hyp(p,o)<=2.5+o.r);const tw=ENEMY.filter(e=>rd(p,e)<=2.5);return {hit,tw,v:hit.length*2+(tw.length?1:0)}};
+function fbBest(u){let b=0,bp=null;for(let x=.5;x<W;x+=.5)for(let y=17;y<32;y+=.5){const v=fbVal({x,y},u).v;if(v>b){b=v;bp={x,y}}}fbBest.p=bp;return b}
+
+/* ---------- runner ---------- */
+const CS={L:null,items:[],i:0,score:0,max:0,ans:null,taps:[],mir:false};
+function cHome(){const el=C$('course');
+ el.innerHTML=`<div class="panel"><h2>Hog 2.6 course</h2><div class="small mute">Built from your Hog 2.6 Masterclass. <b>Micro</b> = placements and timing on the true-scale arena. <b>Macro</b> = decisions: openers, cycle, counter tracking, elixir, spells. Right-lane questions mirror the guide’s left-lane diagrams.</div><div class="ctl" style="justify-content:flex-start"><button class="pri" data-c="exam">Mixed exam · 15</button></div></div>
+ <div class="lessons">${LESSONS.map((l,i)=>{const b=CP[l.id];return `<button class="lesson" data-c="L${i}"><span class="ltag ${l.tag.toLowerCase()}">${l.tag}</span><b>${i+1}. ${E(l.t)}</b><span class="mute small">${b?`Best ${b.s}/${b.m}`:'Not started'}</span></button>`}).join('')}</div>`}
+function cStart(L,items){CS.L=L;CS.items=items;CS.i=0;CS.score=0;CS.max=0;cItem()}
+function cItem(){const it=CS.items[CS.i];CS.ans=null;CS.taps=[];CS.mir=(it.type==='fp'||it.type==='zone'||it.type==='seq')&&Math.random()<.5;
+ if(it.type==='mc'&&!it.opts)it.opts=shuf([it.a,...it.w]);
+ const el=C$('course');const lane=CS.mir?'right':'left';
+ let h=`<div class="panel"><div class="top" style="justify-content:space-between"><button data-c="home">← Lessons</button><span class="mute small">${E(CS.L.t)} · ${CS.i+1}/${CS.items.length} · score ${CS.score}/${CS.max}</span></div>`;
+ if(CS.i===0&&CS.L.read)h+=`<details open class="read"><summary>Read first</summary>${CS.L.read.map(p=>`<p class="small">${p}</p>`).join('')}</details>`;
+ h+=`<div class="q">${(it.type==='fp'||it.type==='zone'||it.type==='seq')?`<span class="ltag">${lane} lane</span> `:''}${it.q}</div>`;
+ if(it.type==='mc')h+=`<div class="opts">${it.opts.map((o,i)=>`<button data-c="o${i}">${o}</button>`).join('')}</div>`;
+ else{const y1=it.type==='fb'?32:19;h+=`<svg id="csvg" viewBox="0 ${H-y1} ${W} ${y1}" style="--ar:${W/y1}" xmlns="http://www.w3.org/2000/svg">${arenaMarkup(y1)}<g id="cov"></g></svg>`;
+  if(it.type==='seq')h+=`<div class="clock" id="cclock">Tap 1: Ice Golem</div>`}
+ h+=`<div id="cfb"></div></div>`;el.innerHTML=h;
+ if(it.type==='fb')C$('cov').innerHTML=it.units.map(o=>`<circle cx="${o.x}" cy="${SY(o.y)}" r="${o.r}" fill="#e2503f" stroke="#4a0f0f" stroke-width=".08"/><text x="${o.x}" y="${SY(o.y)-o.r-.15}" font-size=".55" text-anchor="middle" fill="#fff" font-weight="800">${E(o.n)}</text>`).join('');
+ const sv=C$('csvg');if(sv){sv.addEventListener('pointermove',e=>cHover(e));sv.addEventListener('pointerdown',e=>cTap(e))}}
+function cPt(e){const sv=C$('csvg');const pt=sv.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(sv.getScreenCTM().inverse());return {x:q.x,y:H-q.y}}
+const M=p=>CS.mir?{x:W-p.x,y:p.y}:p; // map a left-lane answer into the asked lane
+const MZ=z=>CS.mir?mirR(z):z;
+function cHover(e){if(CS.ans!==null)return;const it=CS.items[CS.i];const p=cPt(e);let s='';
+ if(it.type==='fp'){const {b}=bldAt(p,2);s=rectSVG(b,'rgba(242,182,50,.35)','#f2b632')}
+ else if(it.type==='fb')s=`<circle cx="${p.x}" cy="${SY(p.y)}" r="2.5" fill="rgba(255,140,40,.2)" stroke="#ff8a3d" stroke-width=".08"/>`;
+ else s=`<rect x="${Math.floor(p.x)}" y="${SY(Math.floor(p.y)+1)}" width="1" height="1" fill="rgba(255,255,255,.3)"/>`;
+ let g=C$('chov');if(!g){g=document.createElementNS('http://www.w3.org/2000/svg','g');g.id='chov';C$('csvg').appendChild(g)}g.innerHTML=s}
+function cTap(e){if(CS.ans!==null)return;const it=CS.items[CS.i];const p=cPt(e);const g=C$('cov');let ok=0,msg='',ov='';
+ if(it.type==='fp'){const {b,ok:valid}=bldAt(p,2);const t=MZ(NOTE(it.n,false));const d=Math.max(Math.abs(b.x0-t.x0),Math.abs(b.y0-t.y0));
+  ok=d===0?1:d===1?.5:0;ov=rectSVG(t,'rgba(63,207,142,.45)','#3fcf8e')+rectSVG(b,ok===1?'rgba(63,207,142,.2)':'rgba(255,93,108,.3)',ok===1?'#3fcf8e':'#ff5d6c','stroke-dasharray=".25 .15"');
+  const yourN=`${15-b.y1}-${CS.mir?W-5-b.x1:b.x0-5}`;msg=ok===1?`Exact: ${it.n}.`:`You placed ${yourN}. ${it.n} is the green square${ok?' (one tile off, half credit)':''}.`}
+ if(it.type==='zone'){const z=MZ(ZONES[it.k].z);ok=inZ(p,z)?1:0;ov=rectSVG(z,'rgba(63,207,142,.4)','#3fcf8e')+dot(p,ok?'#3fcf8e':'#ff5d6c');msg=ok?'Inside the zone.':`The spot is ${ZONES[it.k].n} (green).`}
+ if(it.type==='fb'){const q={x:Math.round(p.x*2)/2,y:Math.round(p.y*2)/2};const r=fbVal(q,it.units);const best=fbBest(it.units);ok=r.v>=best?1:r.v>=best-1&&r.v>0?.5:0;
+  ov=(ok<1&&fbBest.p?`<circle cx="${fbBest.p.x}" cy="${SY(fbBest.p.y)}" r="2.5" fill="rgba(63,207,142,.18)" stroke="#3fcf8e" stroke-width=".1" stroke-dasharray=".3 .2"/>`:'')+`<circle cx="${q.x}" cy="${SY(q.y)}" r="2.5" fill="rgba(255,140,40,.3)" stroke="#ff8a3d" stroke-width=".1"/>`;
+  msg=`Hit ${r.hit.length} unit${r.hit.length===1?'':'s'}${r.hit.length?' ('+r.hit.map(o=>o.n).join(', ')+')':''}${r.tw.length?' + tower':''}: value ${r.v}. Best possible here: ${best}${ok<1?' (green dashed circle)':''}.`}
+ if(it.type==='seq'){const now=performance.now();CS.taps.push({p,t:now});const n=CS.taps.length;
+  g.innerHTML+=dot({x:Math.floor(p.x)+.5,y:Math.floor(p.y)+.5},n===1?'#7fd3ff':'#e2503f',n===1?'IG':'H');
+  if(n===1){C$('cclock').textContent='Tap 2: Hog Rider';return}
+  const [a,b]=CS.taps;const ta=M(it.ig),tb=M(it.hog);const ca={x:Math.floor(a.p.x)+.5,y:Math.floor(a.p.y)+.5},cb={x:Math.floor(b.p.x)+.5,y:Math.floor(b.p.y)+.5};
+  const pa=hyp(ca,ta)<.1,pb=hyp(cb,tb)<.1,dt=(b.t-a.t)/1000,tok=dt>=it.dmin&&dt<=it.dmax;ok=((pa?1:0)+(pb?1:0)+(tok?1:0))/3;
+  ov=`<rect x="${ta.x-.5}" y="${SY(ta.y)-.5}" width="1" height="1" fill="none" stroke="#7fd3ff" stroke-width=".14"/><rect x="${tb.x-.5}" y="${SY(tb.y)-.5}" width="1" height="1" fill="none" stroke="#3fcf8e" stroke-width=".14" stroke-dasharray=".2 .1"/>`;
+  msg=`Ice Golem tile ${pa?'✓':'✗'} · Hog tile ${pb?'✓':'✗'} · gap ${dt.toFixed(2)} s ${tok?'✓':`✗ (want ${it.dmin}–${it.dmax} s)`}. Outlined: blue = Ice Golem, green dashed = Hog.`;
+  C$('cclock').textContent=''}
+ g.innerHTML+=ov;cResolve(ok,msg+' '+it.why)}
+function cResolve(ok,msg){CS.ans=ok;CS.max++;CS.score+=ok;CS.score=Math.round(CS.score*10)/10;const last=CS.i>=CS.items.length-1;
+ C$('cfb').innerHTML=`<div class="fb ${ok>=1?'g':ok>0?'w':'b'}"><b>${ok>=1?'Correct':ok>0?'Partly right':'Not quite'}</b> ${msg}</div><div class="ctl" style="justify-content:flex-start"><button class="pri" data-c="${last?'done':'next'}">${last?'Finish':'Next'}</button></div>`;
+ const h=C$('chov');if(h)h.innerHTML=''}
+function cDone(){const L=CS.L;const s=CS.score,m=CS.max;if(L.id){const b=CP[L.id];if(!b||s/m>b.s/b.m)CP[L.id]={s,m};saveCP()}
+ C$('course').innerHTML=`<div class="panel"><h2>${E(L.t)}: ${s}/${m}</h2><div class="mute small">${s/m>=.9?'Solid. Try the mixed exam or the right-lane mirror next time.':s/m>=.6?'Getting there. Redo it: the generated questions change every run.':'Reread the lesson card and the Masterclass section, then try again.'}</div><div class="ctl" style="justify-content:flex-start"><button data-c="home">Lessons</button><button class="pri" data-c="again">Again</button></div></div>`}
+C$('course').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!b.dataset.c)return;const c=b.dataset.c;
+ if(c==='home')return cHome();
+ if(c==='exam'){const all=LESSONS.flatMap(l=>l.items());return cStart({t:'Mixed exam',id:'exam'},shuf(all).slice(0,15))}
+ if(c[0]==='L'){const L=LESSONS[+c.slice(1)];return cStart(L,L.items().map(x=>({...x})))}
+ if(c[0]==='o'&&CS.ans===null){const it=CS.items[CS.i];const v=it.opts[+c.slice(1)];const ok=v===it.a?1:0;
+  R.querySelectorAll('.opts button').forEach(x=>{const t=it.opts[+x.dataset.c.slice(1)];x.disabled=true;if(t===it.a)x.classList.add('right');else if(x===b)x.classList.add('wrong')});
+  return cResolve(ok,(ok?'':`Answer: <b>${it.a}</b>. `)+it.why)}
+ if(c==='next'){CS.i++;return cItem()}
+ if(c==='done')return cDone();
+ if(c==='again'){if(CS.L.id==='exam')return cStart(CS.L,shuf(LESSONS.flatMap(l=>l.items())).slice(0,15));return cStart(CS.L,CS.L.items().map(x=>({...x})))}});
+function setMode(m){R.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));C$('drills').hidden=m!=='drills';C$('course').hidden=m!=='course';if(m==='course'){stopAnim();cHome()}}
+R.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+
+/* ---------- input ---------- */
+function toArena(e){const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const m=svg.getScreenCTM();if(!m)return null;const q=pt.matrixTransform(m.inverse());return {x:q.x,y:H-q.y}}
+let down=false;
+svg.addEventListener('pointermove',e=>{const p=toArena(e);if(!p)return;st.prev=p;
+ const k=st.sc.kind;if((k==='build'||k==='mortar')&&st.phase==='place'&&down){st.place=bldAt(p,st.sc.w);drawFrame(st.fr?null:{u:ATT[st.sc.att]?[{x:laneX(st.lane),y:19.5,ab:ATT[st.sc.att].ab,c:'att'}]:[]});drawCtl()}
+ drawPrev()});
+svg.addEventListener('pointerleave',()=>{st.prev=null;drawPrev()});
+svg.addEventListener('pointerdown',e=>{const p=toArena(e);if(!p)return;st.prev=p;const k=st.sc.kind;
+ if(k==='build'||k==='mortar'){if(st.phase!=='place')return;down=true;try{svg.setPointerCapture(e.pointerId)}catch(_){}
+  st.place=bldAt(p,st.sc.w);drawFrame({u:ATT[st.sc.att]?[{x:laneX(st.lane),y:19.5,ab:ATT[st.sc.att].ab,c:'att'}]:[]});drawCtl();drawPrev()}
+ else if(st.phase==='running'&&canCast())cast(p)});
+svg.addEventListener('pointerup',()=>{down=false});
+R.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+ if(b.id==='x'){close();return}
+ if(d.sc){setScenario(SC.find(s=>s.id===d.sc));return}
+ if(d.card){st.card=d.card;drawCtl();drawPrev();return}
+ if(d.lane){st.lane=d.lane;reset();return}
+ if(d.act==='go')go();
+ if(d.act==='start')start();
+ if(d.act==='reset')reset();
+ if(d.act==='speed'){st.speed=st.speed===1?.5:1;drawCtl()}
+ if(d.act==='ranges'){st.ranges=!st.ranges;drawRanges();drawCtl()}
+ if(d.act==='heat'){st.heat=!st.heat;drawHeat();drawBestMark(pickBest(st.heatData));drawCtl()}});
+
+function close(){stopAnim();HOST.hidden=true;document.body.style.overflow=''}
+window.openPlacementLab=()=>{HOST.hidden=false;if(!st.inited){st.inited=1;setScenario(st.sc)}};
+window.pausePlacementLab=()=>{if(st.raf){stopAnim();if(st.phase==='running')reset()}};
+})();
+</script>
+<!-- ===== /Placement Lab ===== -->
 <nav class="nav" aria-label="Sections">
   <button type="button" data-v="lib" aria-current="page"><span>🃏</span>Decks</button>
   <button type="button" data-v="fav"><span>♥</span>Favorites</button>
   <button type="button" data-v="bat"><span>⚔</span>Battles</button>
   <button type="button" data-v="lab"><span>💧</span>Lab</button>
+  <button type="button" data-v="place"><span>🎯</span>Place</button>
   <button type="button" data-v="add" class="add"><span>+</span>Add</button>
   <button type="button" data-v="more"><span>⋯</span>More</button>
 </nav>
@@ -166,8 +862,11 @@ const CHAMP=new Set(RAW.champ);
 const CHAMP_AB={'Archer Queen':1,'Golden Knight':1,'Little Prince':3,'Mighty Miner':1,'Monk':1,'Skeleton King':2,'Goblinstein':2,'Boss Bandit':1};
 // Hero ability elixir costs, one use per deployment since the Aug 2026 update (TrophyCoach hero encyclopedia)
 const HERO_AB={'Knight':2,'Giant':2,'Mini P.E.K.K.A':1,'Musketeer':3,'Wizard':2,'Ice Golem':2,'Goblins':1,'Mega Minion':2,'Barbarian Barrel':1,'Magic Archer':2,'Balloon':2,'Dark Prince':3,'Bowler':2,'Tombstone':5,'Valkyrie':3,'Berserker':3,'Ice Wizard':2,'Electro Wizard':2};
-// Evolution cycles (gamingonphone evolution list). Others default to 2 and are marked unverified; editable in Settings.
-const EVO_KNOWN={'Barbarians':1,'Firecracker':2,'Skeletons':2,'Royal Giant':1,'Mortar':2,'Knight':2,'Royal Recruits':1,'Bats':2,'Archers':2,'Ice Spirit':3,'Valkyrie':2,'Bomber':1,'Wall Breakers':2,'Tesla':2,'Zap':2,'Battle Ram':2,'Wizard':1,'Goblin Barrel':2};
+// Evolution cycles, rechecked Nov 2026: Clash Royale wiki evolution table (39 evos); Elite Barbarians (TrophyCoach), Princess (TrophyCoach), Minion Horde (Liquipedia).
+// EVO_UNSURE = sources disagree or none found; still editable in Settings.
+const EVO_KNOWN={'Barbarians':1,'Electro Dragon':1,'Executioner':1,'Goblin Cage':1,'Goblin Giant':1,'Mega Knight':1,'P.E.K.K.A':1,'Royal Giant':1,'Royal Recruits':1,'Witch':1,'Wizard':1,'Elite Barbarians':1,'Minion Horde':1,
+'Archers':2,'Baby Dragon':2,'Battle Ram':2,'Bats':2,'Bomber':2,'Cannon':2,'Dart Goblin':2,'Firecracker':2,'Furnace':2,'Giant Snowball':2,'Goblin Barrel':2,'Goblin Drill':2,'Hunter':2,'Ice Spirit':2,'Inferno Dragon':2,'Knight':2,'Lumberjack':2,'Mortar':2,'Musketeer':2,'Royal Ghost':2,'Royal Hogs':2,'Skeleton Army':2,'Skeleton Barrel':2,'Skeletons':2,'Tesla':2,'Valkyrie':2,'Wall Breakers':2,'Zap':2,'Princess':2};
+const EVO_UNSURE={'Lumberjack':'Wiki table says 2; the Feb 2025 launch articles said 1. Check your pips.','Electro Giant':'New in Oct 2026, no cycle count found yet. Defaulting to 2.','Minion Horde':'Only one source (Liquipedia) found.'};
 const PUMP={rate:8.5,max:8,life:70}; // clasher.us Elixir Collector stats
 const ABBR={'Hog Rider':'HOG','The Log':'LOG','Three Musketeers':'3M','Electro Giant':'EG','Electro Wizard':'EW','Electro Dragon':'ED','Electro Spirit':'ES','Elixir Collector':'PMP','Elixir Golem':'EGL','Elite Barbarians':'EB','Mini P.E.K.K.A':'MP','P.E.K.K.A':'PK','Mega Knight':'MK','Mega Minion':'MM','Minion Horde':'HRD','Skeleton Army':'SKA','Skeleton Barrel':'SKB','Skeleton Dragons':'SKD','Skeleton King':'SK','Skeletons':'SKE','Goblin Barrel':'GBR','Goblin Gang':'GG','Goblin Giant':'GGI','Goblin Hut':'GHT','Goblin Cage':'CAG','Goblin Drill':'DRL','Goblin Curse':'CRS','Goblin Machine':'GMC','Goblin Demolisher':'DEM','Goblinstein':'GST','Goblins':'GOB','Giant Skeleton':'GSK','Giant Snowball':'SNW','Giant':'GIA','Golden Knight':'GK','Golem':'GOL','Royal Giant':'RG','Royal Hogs':'RH','Royal Recruits':'RR','Royal Ghost':'GHO','Royal Delivery':'DLV','Ice Spirit':'ICS','Ice Golem':'IG','Ice Wizard':'IW','Fire Spirit':'FS','Heal Spirit':'HS','Inferno Tower':'INF','Inferno Dragon':'ID','Lava Hound':'LH','Little Prince':'LP','Lumberjack':'LJ','Magic Archer':'MA','Mighty Miner':'MMi','Mother Witch':'MW','Night Witch':'NW','Archer Queen':'AQ','Baby Dragon':'BD','Barbarian Barrel':'BBL','Barbarian Hut':'BHT','Battle Ram':'RAM','Battle Healer':'BH','Bomb Tower':'BT','Boss Bandit':'BB','Cannon Cart':'CC','Dark Prince':'DP','Dart Goblin':'DG','Flying Machine':'FM','Wall Breakers':'WB','Spear Goblins':'SPG','Spirit Empress':'SE','Suspicious Bush':'BSH','Rune Giant':'RNG','Minion Giant':'MGI','Ram Rider':'RR2','X-Bow':'XB','Earthquake':'EQ','Lightning':'LTN','Fireball':'FB','Tornado':'TOR','Poison':'PSN','Rocket':'RKT','Freeze':'FRZ','Graveyard':'GY','Mirror':'MIR','Arrows':'ARR','Zap':'ZAP','Rage':'RGE','Clone':'CLN','Vines':'VIN','Void':'VOD','Tombstone':'TMB','Executioner':'EXE','Firecracker':'FC','Fisherman':'FSH','Musketeer':'MSK','Valkyrie':'VAL','Berserker':'BRS','Princess':'PRN','Bandit':'BDT','Hunter':'HNT','Phoenix':'PHX','Zappies':'ZPS','Rascals':'RAS','Guards':'GRD','Witch':'WCH','Wizard':'WIZ','Bowler':'BWL','Sparky':'SPK','Tesla':'TES','Mortar':'MOR','Furnace':'FUR','Cannon':'CAN','Knight':'KNT','Archers':'ARC','Bats':'BAT','Minions':'MIN','Bomber':'BMB','Barbarians':'BAR','Balloon':'BLN','Miner':'MNR','Monk':'MNK','Prince':'PRC','Ronin':'RON','Lumberjack ':'LJ'};
 const WINCON=['Hog Rider','Golem','Electro Giant','Royal Giant','Giant','Goblin Giant','Lava Hound','Balloon','X-Bow','Mortar','Graveyard','Goblin Barrel','Royal Hogs','Three Musketeers','Ram Rider','Battle Ram','Miner','Goblin Drill','Wall Breakers','Mega Knight','P.E.K.K.A','Elixir Golem','Giant Skeleton','Sparky','Skeleton Barrel','Rune Giant','Minion Giant','Goblinstein','Royal Recruits','Elite Barbarians','Skeleton Dragons','Prince'];
@@ -198,6 +897,7 @@ let S=Object.assign({},DEFAULTS,store.get('settings',{}));
 S.qTypes=Object.assign({},DEFAULTS.qTypes,S.qTypes||{});S.quizTypes=Object.assign({},DEFAULTS.quizTypes,S.quizTypes||{});S.evoOverride=S.evoOverride||{};
 const saveS=()=>{S.myDeckK=S.myDeck>=0&&DECKS[S.myDeck]?DECKS[S.myDeck].k:null;S.oppDeckK=S.oppDeck>=0&&DECKS[S.oppDeck]?DECKS[S.oppDeck].k:null;store.set('settings',S)};
 const evoCycles=n=>S.evoOverride[n]!=null?S.evoOverride[n]:(EVO_KNOWN[n]??2);
+const evoSrc=n=>S.evoOverride[n]!=null?'Your setting':EVO_UNSURE[n]?'Unsure: '+EVO_UNSURE[n]:EVO_KNOWN[n]!=null?'Checked':'Default, unverified';
 const PRESETS={
   elixir:{label:'Elixir mastery',sub:'Both sides play realistic trades for you. Keep the “up / down” count and read their elixir off your bar. Asked at random moments.',
     set:{youPlay:true,autoMe:true,speed:1,qEvery:'time',qSecs:12,timer:10,revealDeck:true,memory:false},types:{elixir:true,diff:true,hand:false,cycle:false,evo:false,inhand:false,ago:false,next:false}},
@@ -441,7 +1141,7 @@ function buildQ(depth=0){
     const v=inHand?0:pos+1;
     return {k,label:'Cycle',prompt:`How many more cards must they play before <b>${esc(target)}</b> is back in their hand? (0 = it already is)`,kind:'pad',answer:v,max:4,why:()=>`Each play pulls the next card from the queue into the hand. ${esc(target)} is ${inHand?'already in hand':`number ${pos+1} in the queue`}. Played since it: ${pl.slice(pl.map(e=>e.card).lastIndexOf(target)+1).map(e=>esc(e.card)).join(', ')||'nothing yet'}.`}}
   if(k==='evo'){const n=pick(evoCards);const N=evoCycles(n);const c=op.evo[n];const left=Math.max(0,N-c);
-    return {k,label:'Evolution watch',prompt:`How many more times must they play <b>${esc(n)}</b> before it comes out evolved? (0 = the next one is evolved)`,kind:'pad',answer:left,max:4,why:()=>`Evo ${esc(n)} needs ${N} cycle${N>1?'s':''} (${S.evoOverride[n]!=null?'your setting':EVO_KNOWN[n]!=null?'listed value':'default, unverified'}). Plays counted since its last evolution: ${c}.`}}
+    return {k,label:'Evolution watch',prompt:`How many more times must they play <b>${esc(n)}</b> before it comes out evolved? (0 = the next one is evolved)`,kind:'pad',answer:left,max:4,why:()=>`Evo ${esc(n)} needs ${N} cycle${N>1?'s':''} (${esc(evoSrc(n).toLowerCase())}). Plays counted since its last evolution: ${c}.`}}
 }
 let qTimer=null;
 function ask(){
@@ -523,7 +1223,7 @@ function quizQ(depth=0){
   const mc=(prompt,right,wrongs,why,label)=>{const o=shuffle([right,...shuffle(wrongs.filter(w=>w!==right)).slice(0,3)]);return {k,label,prompt,kind:'mc',opts:o,answer:right,why}};
   if(k==='cost'){const n=pick(allCards);const c=cost(n);return mc(`How much elixir does <b>${esc(n)}</b> cost?`,String(c),[c-1,c+1,c+2,c-2].filter(x=>x>0&&x<=10).map(String),`${esc(n)} costs ${c}.`,'Card cost')}
   if(k==='ability'){const all=Object.entries(HERO_AB).map(([n,c])=>['Hero '+n,c]).concat(Object.entries(CHAMP_AB));const [n,c]=pick(all);return mc(`How much elixir does the <b>${esc(n)}</b> ability cost?`,String(c),['1','2','3','4','5'],`${esc(n)}'s ability costs ${c}. ${n.startsWith('Hero')?'Hero abilities are one use per deployment.':'Champion abilities can be reused after a cooldown while the champion is alive.'}`,'Ability cost')}
-  if(k==='evo'){const ks=Object.keys(EVO_KNOWN);const n=pick(ks);const c=EVO_KNOWN[n];return mc(`How many cycles does <b>Evo ${esc(n)}</b> need?`,String(c),['1','2','3'],`Listed as ${c} (gamingonphone evolution list). If the game shows a different number, change it in Settings so the match tracker uses yours.`,'Evolution cycles')}
+  if(k==='evo'){const ks=Object.keys(EVO_KNOWN).filter(n=>!EVO_UNSURE[n]);const n=pick(ks);const c=EVO_KNOWN[n];return mc(`How many cycles does <b>Evo ${esc(n)}</b> need?`,String(c),['1','2','3'],`Listed as ${c} (Clash Royale wiki evolution table). If the game shows a different number, change it in Settings so the match tracker uses yours.`,'Evolution cycles')}
   if(k==='trade'){const [a,b,why]=pick(KB.counter);const d=cost(a)-cost(b);const s=d>0?`+${d}`:String(d);
     return mc(`They play <b>${esc(a)}</b> (${cost(a)}). You answer with <b>${esc(b)}</b> (${cost(b)}) and it fully counters. What is your elixir trade?`,s,['+1','+2','+3','0','-1','-2'],`${cost(a)} − ${cost(b)} = ${s}. ${why}`,'Elixir trade')}
   if(k==='counter'){const [a,b,why]=pick(KB.counter);const wr=shuffle(allCards.filter(n=>n!==b&&!KB.counter.some(x=>x[0]===a&&x[1]===n))).slice(0,6);
@@ -633,9 +1333,9 @@ settings(){
     <div class="fld"><span class="lbl">Topics</span>${Object.keys(DEFAULTS.quizTypes).map(k=>ck(k,QLABEL[k],'quizTypes')).join('')}</div>
    </fieldset>
    <fieldset style="grid-column:1/-1"><legend>Evolution cycles</legend>
-    <p class="note">Values marked “listed” come from a public evolution list; the rest default to 2 and may be wrong. If your game shows a different number of pips, set it here and every match uses it.</p>
+    <p class="note">Rechecked Nov 2026 against the Clash Royale wiki evolution table plus TrophyCoach and Liquipedia for the 2026 evos. Rows marked “Unsure” have conflicting or missing sources. If your game shows a different number of pips, set it here and every match uses it.</p>
     <div class="tblw"><table><thead><tr><th>Card</th><th>Cycles</th><th>Source</th></tr></thead><tbody>
-    ${evos.map(n=>`<tr><td>${esc(n)}</td><td><select id="evo-${esc(n).replace(/\W/g,'')}" data-evo="${esc(n)}">${[1,2,3].map(v=>`<option ${evoCycles(n)===v?'selected':''}>${v}</option>`).join('')}</select></td><td class="mute small">${S.evoOverride[n]!=null?'Your setting':EVO_KNOWN[n]!=null?'Listed':'Default, unverified'}</td></tr>`).join('')}
+    ${evos.map(n=>`<tr><td>${esc(n)}</td><td><select id="evo-${esc(n).replace(/\W/g,'')}" data-evo="${esc(n)}">${[1,2,3].map(v=>`<option ${evoCycles(n)===v?'selected':''}>${v}</option>`).join('')}</select></td><td class="mute small">${esc(evoSrc(n))}</td></tr>`).join('')}
     </tbody></table></div>
    </fieldset>
   </section>
@@ -1181,7 +1881,7 @@ async function blobToData(b){return await new Promise(r=>{const fr=new FileReade
 async function saveBackup(){const msg=$("bkmsg");msg.textContent="Preparing…";
   try{const pics={};if(PIDB){const keys=await idbDo(PIDB,"pics","readonly",s=>s.getAllKeys());for(const k of keys){const b=await idbDo(PIDB,"pics","readonly",s=>s.get(k));pics[k]=b?await blobToData(b):null}}
     await loadBattles();
-    const json=JSON.stringify({app:"cr-decks",v:1,at:Date.now(),user:USER,favs:FAVS,hidden:[...HIDDEN],cards:CUSTOM,battles:BSTORE,pics,lab:{settings:lsGet("elab-settings",null),history:lsGet("elab-history",null)}});
+    const json=JSON.stringify({app:"cr-decks",v:1,at:Date.now(),user:USER,favs:FAVS,hidden:[...HIDDEN],cards:CUSTOM,battles:BSTORE,pics,lab:{settings:lsGet("elab-settings",null),history:lsGet("elab-history",null)},place:{best:lsGet("crplace-best",null),course:lsGet("hog26-course",null)}});
     const d=new Date(),z=n=>String(n).padStart(2,"0"),name=`cr-decks-backup-${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}.json`;
     if(window.AndroidFile){AndroidFile.save(name,json);msg.textContent="Choose where to save the file…";return}
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([json],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();a.remove();msg.textContent="Backup downloaded."}
@@ -1194,6 +1894,7 @@ async function restoreBackup(e){const f=e.target.files[0];e.target.value="";if(!
     PENDING=null;USER=j.user||[];FAVS=j.favs||{};HIDDEN=new Set(j.hidden||[]);CUSTOM=j.cards||{};
     lsSet("crd-user",USER);lsSet("crd-favs",FAVS);lsSet("crd-hidden",[...HIDDEN]);lsSet("crd-cards",CUSTOM);for(const [id,v] of Object.entries(CUSTOM))CARDS[id]=v;
     if(j.lab){if(j.lab.settings)lsSet("elab-settings",j.lab.settings);if(j.lab.history)lsSet("elab-history",j.lab.history);LABH.api=null}
+    if(j.place){if(j.place.best)lsSet("crplace-best",j.place.best);if(j.place.course)lsSet("hog26-course",j.place.course)}
     await loadBattles();if(BIDB){await idbDo(BIDB,"battles","readwrite",s=>s.clear());for(const b of j.battles||[])await idbDo(BIDB,"battles","readwrite",s=>s.put(b))}
     PIDB=PIDB||await idbOpen("crd-pics","pics");await idbDo(PIDB,"pics","readwrite",s=>s.clear());
     for(const [k,u] of Object.entries(j.pics||{})){const b=u?await (await fetch(u)).blob():null;await idbDo(PIDB,"pics","readwrite",s=>s.put(b,k))}
@@ -1269,14 +1970,14 @@ function renderLab(){$("count").textContent="";
   if(!LABH.api||(LABH.sig!==labSig()&&!inMatch))mountLab()}
 
 /* ---------- view switching ---------- */
-const TITLES={lib:"My decks",fav:"Favorites",bat:"Battles",add:"Add a deck",lab:"Elixir Lab",more:"More"};
+const TITLES={lib:"My decks",fav:"Favorites",bat:"Battles",add:"Add a deck",lab:"Elixir Lab",place:"Placement Lab",more:"More"};
 function syncTop(){const lib=VIEW==="lib";$("ttl").textContent=TITLES[VIEW];$("srow").hidden=!(lib||VIEW==="fav"||VIEW==="bat");$("fbtn").hidden=!lib;$("secchips").hidden=!lib;
   $("q").placeholder=VIEW==="bat"?"Search a card":"Search a card or deck";
   const n=!!S.arch+!!S.spec+!!S.era+!!S.tower;$("fbadge").hidden=!n;$("fbadge").textContent=n;
   $("secchips").innerHTML=SECS.map(([k,l])=>`<button class="chip" type="button" data-sec="${k}" aria-pressed="${S.sec===k}">${l}</button>`).join("");
   document.querySelectorAll(".nav [data-v]").forEach(b=>{if(b.dataset.v===VIEW)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")})}
-function setView(v){if(VIEW==="lab"&&v!=="lab"&&LABH.api)LABH.api.pause();VIEW=v;const lab=v==="lab";$("labhost").hidden=!lab;$("out").hidden=lab;document.querySelector("header.top").hidden=lab;syncTop();render();scrollTo(0,0)}
-function render(){if(VIEW==="lab")return renderLab();if(VIEW==="lib")renderLib();else if(VIEW==="fav")renderFav();else if(VIEW==="bat")renderBat();else if(VIEW==="add")renderAdd();else renderMore()}
+function setView(v){if(VIEW==="lab"&&v!=="lab"&&LABH.api)LABH.api.pause();if(VIEW==="place"&&v!=="place"&&window.pausePlacementLab)pausePlacementLab();VIEW=v;const lab=v==="lab",pl=v==="place";$("labhost").hidden=!lab;$("plabhost").hidden=!pl;$("out").hidden=lab||pl;document.querySelector("header.top").hidden=lab||pl;syncTop();render();scrollTo(0,0)}
+function render(){if(VIEW==="lab")return renderLab();if(VIEW==="place")return window.openPlacementLab&&openPlacementLab();if(VIEW==="lib")renderLib();else if(VIEW==="fav")renderFav();else if(VIEW==="bat")renderBat();else if(VIEW==="add")renderAdd();else renderMore()}
 document.querySelector(".nav").onclick=e=>{const b=e.target.closest("[data-v]");if(!b)return;if(b.dataset.v==="add"&&VIEW!=="add")ED=null;if(b.dataset.v==="lib")S.only=null;setView(b.dataset.v)};
 $("secchips").onclick=e=>{const b=e.target.closest("[data-sec]");if(!b)return;S.sec=b.dataset.sec;S.only=null;syncTop();render();scrollTo(0,0)};
 $("fbtn").onclick=filterSheet;
