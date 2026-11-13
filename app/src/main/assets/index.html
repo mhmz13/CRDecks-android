@@ -105,7 +105,7 @@ body.editpics .cd{outline:2px dashed var(--gold);outline-offset:-2px}
 select,.inp,textarea{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:16px}
 textarea{min-height:76px;resize:vertical}
 .wrapchips{display:flex;flex-wrap:wrap;gap:6px}
-.sbtns{display:flex;gap:8px}
+.sbtns{display:flex;gap:8px}.duset{contain-intrinsic-size:auto 640px}.dud{border-top:1px solid var(--line);margin-top:10px;padding-top:9px}.dud.locked{border-top-color:var(--gold)}.dudh{display:flex;align-items:center;gap:8px}.dudt{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:.86rem}.dudt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}.cards.c8{grid-template-columns:repeat(8,1fr);gap:3px;margin-top:6px}.c8 .cd{border-radius:6px;padding:0}.c8 .cd .nm{display:none}.c8 .cd .rl{display:none}.c8 .cd .cost{width:14px;height:16px;font-size:.58rem;top:1px;left:1px}.duda{display:flex;gap:8px;margin-top:7px;align-items:center}.chip small{opacity:.7;font-weight:700}
 .page{display:flex;flex-direction:column;gap:12px;padding:4px}
 .card2{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .card2 h2{margin:0;font-size:1.02rem;font-weight:900}
@@ -1151,17 +1151,66 @@ function saveEd(){const msg=$("edmsg");
   saveUser();ED=null;toast("Deck saved.");S={...S,sec:"all",q:"",only:BYKEY[key]?BYKEY[key].i:null};$("q").value="";setView("lib")}
 
 /* ---------- more ---------- */
+
+/* ---------- duel / clan war sets: 4 decks, no card twice ---------- */
+let DUEL=false,DU=lsGet("crd-duel",{tags:["user"],locks:[]}),DUSETS=[];
+const DUTAGS=[["user","Added by me",d=>!!d.userAdd],["main","★ Main",d=>d.tier==="main"],["test","Worth testing",d=>d.tier==="test"],["mine","I play",d=>!!d.mine],["fav","Favorites",d=>isFav(d.key)],["war","Clan war",d=>!!(d.slot&&(d.slot.war||d.slot.waralt))],["tr","Trophy Road",d=>!!(d.slot&&d.slot.tr)],["now","Current meta",d=>d.era==="now"&&!d.userAdd],["all","Whole library",d=>true]];
+function duScore(d){let s=0;if(d.tier==="main")s+=4;else if(d.tier==="test")s+=1;if(isFav(d.key))s+=2;if(d.userAdd)s+=1;if(d.mine){const g=d.mine[0]+d.mine[1];if(g>=5)s+=4*d.mine[0]/g;else if(g)s+=1}return s}
+function duPool(){const fs=DUTAGS.filter(t=>DU.tags.includes(t[0])).map(t=>t[2]);return D.filter(d=>!d.oppOnly&&!HIDDEN.has(d.key)&&fs.some(f=>f(d)))}
+function duFind(pool,locks){const n=pool.length,sets=pool.map(d=>new Set(d.ids.map(x=>normId(Number(x))))),sc=pool.map(duScore);
+  const ok=(a,b)=>{for(const x of sets[a])if(sets[b].has(x))return false;return true};
+  const adj=pool.map(()=>new Uint8Array(n));for(let a=0;a<n;a++)for(let b=a+1;b<n;b++)if(ok(a,b)){adj[a][b]=1;adj[b][a]=1}
+  const L=locks.map(k=>pool.findIndex(d=>d.key===k)).filter(i=>i>=0);
+  for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++)if(!adj[L[i]][L[j]])return{size:0,res:[],cut:false,clash:true};
+  const free=[];for(let i=0;i<n;i++)if(!L.includes(i)&&L.every(l=>adj[l][i]))free.push(i);
+  free.sort((a,b)=>sc[b]-sc[a]);
+  const CAP=30000;let cut=false;
+  const run=size=>{const res=[],need=size-L.length;if(need<0)return res;
+    const go=(start,pick)=>{if(cut)return;if(pick.length===need){if(res.length>=CAP){cut=true;return}res.push(L.concat(pick));return}
+      for(let x=start;x<free.length;x++){const i=free[x];let good=true;for(const j of pick)if(!adj[i][j]){good=false;break}if(good){pick.push(i);go(x+1,pick);pick.pop();if(cut)return}}};
+    go(0,[]);return res};
+  let size=4,res=run(4);while(!res.length&&size>2){size--;cut=false;res=run(size)}
+  const tot=r=>r.reduce((a,i)=>a+sc[i],0);
+  res=res.map(r=>({r,t:tot(r)})).sort((a,b)=>b.t-a.t).slice(0,300).map(o=>o.r.slice().sort((a,b)=>sc[b]-sc[a]).map(i=>pool[i]));
+  return{size,res,cut,clash:false}}
+function duDeckHTML(d){const v=d.variants[0],order=varOrder(v),locked=DU.locks.includes(d.key);
+  const tg=[d.tier==="main"?`<span class="tag main">★ Main</span>`:"",d.mine?`<span class="tag mine">${d.mine[0]}W ${d.mine[1]}L</span>`:"",isFav(d.key)?`<span class="tag">♥</span>`:""].join("");
+  return `<div class="dud${locked?" locked":""}"><div class="dudh"><div class="dudt"><b>${esc(d.title)}</b>${tg}</div><span class="elx"><span class="drop"></span>${d.avg.toFixed(1)}</span></div>
+  <div class="cards c8">${order.map(id=>tile(id,v.roles[String(id)]||v.roles[String(normId(id))])).join("")}</div>
+  <div class="duda"><button class="btn small${locked?" gold":""}" type="button" data-dulock="${d.key}" aria-pressed="${locked}">${locked?"Locked in":"Lock in"}</button><span style="flex:1"></span><a class="btn small gold" href="${esc(v.link)}">Open in game</a></div></div>`}
+function duSetHTML(ds,k){return `<article class="dk duset"><div class="dh"><div class="dt"><h3>Set ${k+1}</h3><div class="sub">${ds.length*8} different cards · average ${(ds.reduce((a,d)=>a+d.avg,0)/ds.length).toFixed(1)} elixir</div></div><button class="btn small" type="button" data-ducopy="${k}">Copy links</button></div>${ds.map(duDeckHTML).join("")}</article>`}
+function renderDuel(){$("count").textContent="";DU.tags=DU.tags.filter(t=>DUTAGS.some(x=>x[0]===t));if(!DU.tags.length)DU.tags=["user"];
+  const pool=duPool();DU.locks=DU.locks.filter(k=>pool.some(d=>d.key===k));lsSet("crd-duel",DU);
+  const {size,res,cut,clash}=duFind(pool,DU.locks);DUSETS=res;
+  const lockNames=DU.locks.map(k=>BYKEY[k]).filter(Boolean);
+  const note=clash?"Two of the decks you locked share a card, so they can't be in the same set. Unlock one."
+    :!res.length?(pool.length<2?"The pool has "+pool.length+" deck"+(pool.length===1?"":"s")+". Add more tags to widen it.":"No two decks in this pool are free of shared cards. Add more tags to widen the pool.")
+    :size<4?`No full set of 4 exists in this pool${lockNames.length?" with the locked deck"+(lockNames.length===1?"":"s"):""}. Showing the best sets of ${size} instead; widen the pool to fill the rest.`
+    :`${res.length}${cut||res.length===300?"+":""} set${res.length===1?"":"s"} of 4 with no card repeated, best first${cut||res.length===300?" (showing the top 300; lock a deck to narrow it)":""}.`;
+  const head=`<div class="page"><section class="card2"><div class="sbtns"><button class="btn" type="button" id="duback">← Back to More</button></div><h2>Duel and clan war sets</h2>
+  <p class="hint">Four decks that share no card, like a war day or a duel needs. Choose which tags the decks may come from.</p>
+  <div class="chips" style="flex-wrap:wrap;overflow:visible;margin:0;padding:0">${DUTAGS.map(([k,l,f])=>`<button class="chip" type="button" data-dutag="${k}" aria-pressed="${DU.tags.includes(k)}">${l} <small>${D.filter(d=>!d.oppOnly&&!HIDDEN.has(d.key)&&f(d)).length}</small></button>`).join("")}</div>
+  ${lockNames.length?`<div class="fld"><span class="lab">Locked in</span><div class="chips" style="flex-wrap:wrap;overflow:visible;margin:0;padding:0">${lockNames.map(d=>`<button class="chip" type="button" aria-pressed="true" data-dulock="${d.key}">${esc(d.title)} ✕</button>`).join("")}</div></div>`:""}
+  <p class="hint"><b>${pool.length} decks in the pool.</b> ${note}</p></section></div>`;
+  paint(res.map((ds,k)=>({f:()=>duSetHTML(ds,k)})),head);
+  $("duback").onclick=()=>{DUEL=false;renderMore();scrollTo(0,0)}}
+$("out").addEventListener("click",e=>{if(VIEW!=="more"||!DUEL)return;const t=e.target;
+  const tg=t.closest("[data-dutag]");if(tg){const k=tg.dataset.dutag;if(DU.tags.includes(k)){if(DU.tags.length===1){toast("Keep at least one tag.");return}DU.tags=DU.tags.filter(x=>x!==k)}else DU.tags.push(k);renderDuel();return}
+  const lk=t.closest("[data-dulock]");if(lk){const k=lk.dataset.dulock;if(DU.locks.includes(k))DU.locks=DU.locks.filter(x=>x!==k);else{if(DU.locks.length>=3){toast("You can lock up to 3 decks.");return}DU.locks.push(k)}renderDuel();scrollTo(0,0);return}
+  const cp=t.closest("[data-ducopy]");if(cp){const ds=DUSETS[+cp.dataset.ducopy];if(ds)copyText(ds.map(d=>d.title+"\n"+d.variants[0].link).join("\n\n"))}});
 let GAL=false,GQ="",GF="all";
-function renderMore(){$("count").textContent="";if(GAL)return renderGallery();const nPics=Object.values(UPICS).filter(Boolean).length+BPICS.size;
+function renderMore(){$("count").textContent="";if(DUEL)return renderDuel();if(GAL)return renderGallery();const nPics=Object.values(UPICS).filter(Boolean).length+BPICS.size;
   $("out").innerHTML=`<div class="page">
   <section class="card2"><h2>Back up or move everything</h2><p>One file with your added decks, favorites, hidden decks, imported battles, the pictures you added and your Elixir Lab progress. Open it here on another phone, or after reinstalling.</p>
     <div class="sbtns"><button class="btn gold grow" type="button" id="bksave">Save backup file</button><label class="btn grow">Restore from file<input type="file" id="bkfile" class="vh" accept=".json,application/json,*/*"></label></div><p class="msg" id="bkmsg"></p></section>
+  <section class="card2"><h2>Duel and clan war sets</h2><p>Groups of four decks with no card repeated, built from the decks you added or any other tag.</p><button class="btn gold" type="button" id="duopen">Build sets of 4 decks</button></section>
   <section class="card2"><h2>Card pictures</h2><p>${BPICS.size} pictures came with the app. Turn this on, then tap any card in any deck to give it a picture (normal, Evo and Hero forms each get their own).</p>
     <div class="sbtns"><button class="btn gold grow" type="button" id="galopen">Open card gallery</button><button class="btn${EDIT?" gold":""} grow" type="button" id="picmode">${EDIT?"Done adding pictures":"Pick from decks instead"}</button></div></section>
   <section class="card2"><h2>Hidden decks</h2><p>${HIDDEN.size?HIDDEN.size+" deck"+(HIDDEN.size===1?" is":"s are")+" hidden.":"No hidden decks. Use Details → Hide this deck to tidy the list."}</p>${HIDDEN.size?`<button class="btn" type="button" id="unhide">Show all hidden decks again</button>`:""}</section>
   <section class="card2"><h2>About</h2><p>${BASE.filter(d=>!d.oppOnly).length} library decks and ${BSEED.length} battles came with the app; ${USER.length} deck${USER.length===1?"":"s"} added by you. Everything stays on this phone.</p></section></div>`;
   $("bksave").onclick=saveBackup;$("bkfile").onchange=restoreBackup;
   $("galopen").onclick=()=>{GAL=true;renderMore();scrollTo(0,0)};
+  $("duopen").onclick=()=>{DUEL=true;renderMore();scrollTo(0,0)};
   $("picmode").onclick=()=>{EDIT=!EDIT;document.body.classList.toggle("editpics",EDIT);if(EDIT){toast("Tap any card to set its picture.");setView("lib")}else renderMore()};
   if($("unhide"))$("unhide").onclick=()=>{HIDDEN.clear();lsSet("crd-hidden",[]);renderMore();toast("All decks are visible again.")}}
 function galCards(){const seen=new Set(),L=[];for(const [id,v] of Object.entries(CARDS)){if(!/^2[678]/.test(id)||!v||!v[0]||seen.has(v[0]))continue;seen.add(v[0]);L.push({id:+id,n:v[0],c:v[1]})}return L.sort((a,b)=>a.n.localeCompare(b.n))}
