@@ -1207,7 +1207,7 @@ function renderMore(){$("count").textContent="";if(DUEL)return renderDuel();if(G
   <section class="card2"><h2>Card pictures</h2><p>${BPICS.size} pictures came with the app. Turn this on, then tap any card in any deck to give it a picture (normal, Evo and Hero forms each get their own).</p>
     <div class="sbtns"><button class="btn gold grow" type="button" id="galopen">Open card gallery</button><button class="btn${EDIT?" gold":""} grow" type="button" id="picmode">${EDIT?"Done adding pictures":"Pick from decks instead"}</button></div></section>
   <section class="card2"><h2>Hidden decks</h2><p>${HIDDEN.size?HIDDEN.size+" deck"+(HIDDEN.size===1?" is":"s are")+" hidden.":"No hidden decks. Use Details → Hide this deck to tidy the list."}</p>${HIDDEN.size?`<button class="btn" type="button" id="unhide">Show all hidden decks again</button>`:""}</section>
-  <section class="card2"><h2>About</h2><p>${BASE.filter(d=>!d.oppOnly).length} library decks and ${BSEED.length} battles came with the app; ${USER.length} deck${USER.length===1?"":"s"} added by you. Everything stays on this phone.</p></section></div>`;
+  <section class="card2"><h2>About</h2><p>${BASE.filter(d=>!d.oppOnly).length} library decks and ${BSEED.length} battles came with the app; ${USER.length} deck${USER.length===1?"":"s"} added by you. Everything stays on this phone.</p><p class="hint">Version 1.6</p></section></div>`;
   $("bksave").onclick=saveBackup;$("bkfile").onchange=restoreBackup;
   $("galopen").onclick=()=>{GAL=true;renderMore();scrollTo(0,0)};
   $("duopen").onclick=()=>{DUEL=true;renderMore();scrollTo(0,0)};
